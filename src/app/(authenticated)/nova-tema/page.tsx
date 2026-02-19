@@ -10,12 +10,19 @@ import {
   AlignLeft,
   ArrowLeft,
   CheckCircle,
+  Tag,
+  MapPin,
 } from "lucide-react";
 import Link from "next/link";
+import type { TemaTyp } from "@/lib/types/database";
+import { temaTypLabels } from "@/lib/types/database";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 export default function NovaTemPage() {
   const [nazov, setNazov] = useState("");
   const [popis, setPopis] = useState("");
+  const [typ, setTyp] = useState<TemaTyp>("reportaz");
+  const [miesto, setMiesto] = useState("");
   const [datum, setDatum] = useState(format(new Date(), "yyyy-MM-dd"));
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -42,6 +49,8 @@ export default function NovaTemPage() {
       datum,
       nazov,
       popis: popis || null,
+      typ,
+      miesto: miesto || null,
       stav: "caka",
       poznamka_veduceho: null,
       schvalil_id: null,
@@ -77,6 +86,8 @@ export default function NovaTemPage() {
                 setSuccess(false);
                 setNazov("");
                 setPopis("");
+                setMiesto("");
+                setTyp("reportaz");
               }}
               className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             >
@@ -120,38 +131,29 @@ export default function NovaTemPage() {
         onSubmit={handleSubmit}
         className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5"
       >
+        {/* Typ */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             <div className="flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              Dátum
+              <Tag className="w-4 h-4 text-gray-400" />
+              Typ
             </div>
           </label>
-          <input
-            type="date"
-            value={datum}
-            onChange={(e) => setDatum(e.target.value)}
+          <select
+            value={typ}
+            onChange={(e) => setTyp(e.target.value as TemaTyp)}
             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900"
-            required
-          />
-          <div className="flex gap-2 mt-2">
-            <button
-              type="button"
-              onClick={() => setDatum(format(new Date(), "yyyy-MM-dd"))}
-              className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium transition-colors"
-            >
-              Dnes
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                setDatum(format(addDays(new Date(), 1), "yyyy-MM-dd"))
-              }
-              className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 font-medium transition-colors"
-            >
-              Zajtra
-            </button>
-          </div>
+          >
+            {(Object.keys(temaTypLabels) as TemaTyp[]).map((key) => (
+              <option key={key} value={key}>
+                {temaTypLabels[key]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <DatePicker value={datum} onChange={setDatum} label="Dátum" />
         </div>
 
         <div>
@@ -168,6 +170,23 @@ export default function NovaTemPage() {
             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400"
             placeholder="Zadajte názov témy"
             required
+          />
+        </div>
+
+        {/* Miesto */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <div className="flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-gray-400" />
+              Miesto (voliteľné)
+            </div>
+          </label>
+          <input
+            type="text"
+            value={miesto}
+            onChange={(e) => setMiesto(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400"
+            placeholder="Mesto alebo oblasť"
           />
         </div>
 

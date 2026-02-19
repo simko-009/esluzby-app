@@ -4,6 +4,63 @@ export type TemaStav = "neschvalene" | "caka" | "schvalene";
 
 export type ReporterStav = "pracujuci" | "nepracujuci" | "volno";
 
+export type PoziciaTyp =
+  | "veduci_dna"
+  | "producent_tn"
+  | "editor"
+  | "pomocny_editor"
+  | "produkcia_1"
+  | "produkcia_2"
+  // | "produkcia_3"
+  | "web_editor"
+  | "redaktor_tn_live";
+
+export type TypVolna =
+  | "dovolenka"
+  | "nahradne_volno"
+  | "sick_day"
+  | "lekar"
+  | "ospravedlnene"
+  | "neospravedlnene"
+  | "ine";
+
+export type VolnoStav = "caka" | "schvalene" | "neschvalene";
+
+export type TemaTyp = "reportaz" | "skladacka";
+
+export const poziciaLabels: Record<PoziciaTyp, string> = {
+  veduci_dna: "Vedúci dňa",
+  producent_tn: "Producent TN",
+  editor: "Editor",
+  pomocny_editor: "Pomocný editor",
+  produkcia_1: "Produkcia 1",
+  produkcia_2: "Produkcia 2",
+  // produkcia_3: "Produkcia 3",
+  web_editor: "WEB editor",
+  redaktor_tn_live: "Redaktor TN Live",
+};
+
+export const typVolnaLabels: Record<TypVolna, string> = {
+  dovolenka: "Dovolenka",
+  nahradne_volno: "Náhradné voľno",
+  sick_day: "Sick day",
+  lekar: "Lekár",
+  ospravedlnene: "Ospravedlnené",
+  neospravedlnene: "Neospravedlnené",
+  ine: "Iné",
+};
+
+export const volnoStavLabels: Record<VolnoStav, string> = {
+  caka: "Čaká na schválenie",
+  schvalene: "Schválené",
+  neschvalene: "Neschválené",
+};
+
+export const temaTypLabels: Record<TemaTyp, string> = {
+  reportaz: "Reportáž",
+  skladacka: "Skladačka, synchrón, ilustráky",
+};
+
 export interface Profile {
   id: string;
   email: string;
@@ -11,7 +68,14 @@ export interface Profile {
   priezvisko: string;
   rola: UserRole;
   telefon: string | null;
+  region: string | null;
   created_at: string;
+}
+
+export interface ProfilePozicia {
+  id: string;
+  profile_id: string;
+  pozicia: PoziciaTyp;
 }
 
 export interface Tema {
@@ -21,6 +85,8 @@ export interface Tema {
   nazov: string;
   popis: string | null;
   stav: TemaStav;
+  typ: TemaTyp;
+  miesto: string | null;
   poznamka_veduceho: string | null;
   schvalil_id: string | null;
   created_at: string;
@@ -36,6 +102,10 @@ export interface Volno {
   datum_od: string;
   datum_do: string;
   dovod: string | null;
+  typ: TypVolna;
+  stav: VolnoStav;
+  schvalil_id: string | null;
+  poznamka: string | null;
   created_at: string;
   // Joined
   reporter?: Profile;
@@ -57,6 +127,15 @@ export interface VeduciDna {
   veduci_id: string;
   // Joined
   veduci?: Profile;
+}
+
+export interface DennyPozicia {
+  id: string;
+  datum: string;
+  profile_id: string;
+  pozicia: PoziciaTyp;
+  // Joined
+  profile?: Profile;
 }
 
 export interface Database {

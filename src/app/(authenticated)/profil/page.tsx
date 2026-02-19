@@ -1,18 +1,75 @@
 import { createClient } from "@/lib/supabase/server";
 import { ProfilClient } from "@/components/profil/ProfilClient";
-import type { Profile } from "@/lib/types/database";
+import type { Profile, DennyStav, Tema, Volno } from "@/lib/types/database";
 
-export default async function ProfilPage() {
+export default async function ProfilPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ user?: string }>;
+}) {
   const supabase = await createClient();
+  const params = await searchParams;
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: profile } = (await supabase
+  // Current user's profile
+  const { data: currentProfile } = (await supabase
     .from("profiles")
     .select("*")
     .eq("id", user!.id)
     .single()) as { data: Profile | null };
 
-  return <ProfilClient profile={profile!} />;
+  // Target profile (self or other user if admin viewing)
+  const targetId = params.user || user!.id;
+  const isOwnProfile = targetId === user!.id;
+  const { data: targetProfile } = isOwnProfile
+    ? { data: currentProfile }
+    : ((await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", targetId)
+        .single()) as { data: Profile | null });
+
+  // Fetch denny_stav for last 3 months
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  const { data: denneStavy } = (await supabase
+    .from("denny_stav")
+    .select("*")
+    .eq("reporter_id", targetId)
+    .gte("datum", threeMonthsAgo.toISOString().split("T")[0])
+    .order("datum")) as { data: DennyStav[] | null };
+
+  // Fetch all temy for target user
+  const { data: temy } = (await supabase
+    .from("temy")
+    .select("*")
+    .eq("reporter_id", targetId)
+    .order("datum", { ascending: false })) as { data: Tema[] | null };
+
+  // Fetch all volna for target user
+  const { data: volna } = (await supabase
+    .from("volna")
+    .select("*")
+    .eq("reporter_id", targetId)
+    .order("datum_od", { ascending: false })) as { data: Volno[] | null };
+
+  // All profiles for admin use
+  const { data: allProfiles } = (await supabase
+    .from("profiles")
+    .select("*")
+    .order("priezvisko")) as { data: Profile[] | null };
+
+  return (
+    <ProfilClient
+      profile={targetProfile!}
+      currentProfile={currentProfile!}
+      isOwnProfile={isOwnProfile}
+      denneStavy={denneStavy || []}
+      temy={temy || []}
+      volna={volna || []}
+      allProfiles={allProfiles || []}
+    />
+  );
 }
