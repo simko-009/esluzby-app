@@ -112,6 +112,27 @@ export const poziciaLabels: Record<PoziciaTyp, string> = {
   redaktor_tn_live: "Redaktor TN Live",
 };
 
+/** Mapping of each position to the roles that can fill it */
+export const poziciaRoly: Record<PoziciaTyp, UserRole[]> = {
+  veduci_dna: ["veduci_vydania"],
+  producent_tn: ["veduci_vydania"],
+  editor: ["veduci_vydania"],
+  pomocny_editor: ["veduci_vydania"],
+  produkcia_1: ["produkcia"],
+  produkcia_2: ["produkcia"],
+  web_editor: ["web_editor"],
+  redaktor_tn_live: ["tn_live"],
+};
+
+/** Get profiles eligible for a given position (matching role only, excludes admin-only) */
+export function getProfilesForPozicia(
+  profiles: Profile[],
+  pozicia: PoziciaTyp,
+): Profile[] {
+  const allowedRoles = poziciaRoly[pozicia];
+  return profiles.filter((p) => allowedRoles.some((r) => hasRole(p, r)));
+}
+
 export const typVolnaLabels: Record<TypVolna, string> = {
   dovolenka: "Dovolenka",
   nahradne_volno: "Náhradné voľno",
@@ -142,6 +163,7 @@ export interface Profile {
   roly: UserRole[];
   telefon: string | null;
   region: string | null;
+  je_regionalny: boolean;
   created_at: string;
 }
 

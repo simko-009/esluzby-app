@@ -31,6 +31,7 @@ import {
   isOnlyReporter,
   rolaLabels,
   rolaColors,
+  getProfilesForPozicia,
 } from "@/lib/types/database";
 import {
   ChevronLeft,
@@ -44,10 +45,8 @@ import {
   Pencil,
   Trash2,
   X,
-  SlidersHorizontal,
   Send,
   RotateCcw,
-  ArrowUpDown,
   PlusCircle,
 } from "lucide-react";
 import { DatePicker } from "@/components/ui/DatePicker";
@@ -65,7 +64,6 @@ const POZICIA_ORDER: PoziciaTyp[] = [
   "pomocny_editor",
   "produkcia_1",
   "produkcia_2",
-  // "produkcia_3",
   "web_editor",
   "redaktor_tn_live",
 ];
@@ -99,15 +97,68 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
     newStav: TemaStav;
   } | null>(null);
   const [stavChangePoznamka, setStavChangePoznamka] = useState("");
-  // Filters
-  const [filterRegion, setFilterRegion] = useState<string>("all");
-  const [filterStav, setFilterStav] = useState<string>("all");
-  const [filterTemaStav, setFilterTemaStav] = useState<string>("all");
-  const [showFilters, setShowFilters] = useState(false);
-  // Sorting
-  const [sortMode, setSortMode] = useState<"alphabetical" | "region">(
-    "alphabetical",
-  );
+  // Filters — load saved values from localStorage
+  const [filterRegion, setFilterRegionRaw] = useState<
+    "vsetci" | "bratislavski" | "regionalny"
+  >("vsetci");
+  const [filterStav, setFilterStavRaw] = useState<
+    "all" | "pracujuci" | "nepracujuci" | "volno"
+  >("all");
+  const [cakajuceNaVrch, setCakajuceNaVrchRaw] = useState(true);
+  const [ulozitFiltre, setUlozitFiltreRaw] = useState(false);
+  const filtersInitialized = useRef(false);
+
+  // Load saved filters from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("esluzby_filtre");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.ulozene) {
+          if (parsed.filterRegion) setFilterRegionRaw(parsed.filterRegion);
+          if (parsed.filterStav) setFilterStavRaw(parsed.filterStav);
+          if (typeof parsed.cakajuceNaVrch === "boolean")
+            setCakajuceNaVrchRaw(parsed.cakajuceNaVrch);
+          setUlozitFiltreRaw(true);
+        }
+      }
+    } catch {
+      // ignore
+    }
+    filtersInitialized.current = true;
+  }, []);
+
+  // Persist filters to localStorage when they change
+  useEffect(() => {
+    if (!filtersInitialized.current) return;
+    if (ulozitFiltre) {
+      localStorage.setItem(
+        "esluzby_filtre",
+        JSON.stringify({
+          ulozene: true,
+          filterRegion,
+          filterStav,
+          cakajuceNaVrch,
+        }),
+      );
+    }
+  }, [ulozitFiltre, filterRegion, filterStav, cakajuceNaVrch]);
+
+  const setFilterRegion = (v: typeof filterRegion) => {
+    setFilterRegionRaw(v);
+  };
+  const setFilterStav = (v: typeof filterStav) => {
+    setFilterStavRaw(v);
+  };
+  const setCakajuceNaVrch = (v: boolean) => {
+    setCakajuceNaVrchRaw(v);
+  };
+  const setUlozitFiltre = (v: boolean) => {
+    setUlozitFiltreRaw(v);
+    if (!v) {
+      localStorage.removeItem("esluzby_filtre");
+    }
+  };
   // Nova tema modal
   const [showNovaTema, setShowNovaTema] = useState(false);
   // Expanded popis state
@@ -203,73 +254,37 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
   // Apply filters
   const filteredReporters = sortedReporters.filter((r) => {
     // Region filter
-    if (filterRegion !== "all" && r.region !== filterRegion) return false;
+    if (filterRegion === "bratislavski" && r.je_regionalny) return false;
+    if (filterRegion === "regionalny" && !r.je_regionalny) return false;
     // Working status filter
     if (filterStav !== "all") {
       const stav = getReporterStav(r.id);
       if (stav !== filterStav) return false;
     }
-    // Topic status filter
-    if (filterTemaStav !== "all") {
-      const rTemy = getReporterTemy(r.id);
-      if (!rTemy.some((t) => t.stav === filterTemaStav)) return false;
-    }
     return true;
   });
 
-  // Unique regions for filter
-  const uniqueRegions = [
-    ...new Set(
-      allProfiles.filter((p) => p.region).map((p) => p.region as string),
-    ),
-  ].sort();
-
-  // Apply sorting — current user always on top
+  // Apply sorting — current user always first, then čakajúce na vrch, then alphabetical
   const sortedFilteredReporters = [...filteredReporters].sort((a, b) => {
+    // Current user always first
     if (a.id === currentProfile.id) return -1;
     if (b.id === currentProfile.id) return 1;
-    if (sortMode === "region") {
-      const currentRegion = currentProfile.region || "";
-      const regionA = a.region || "";
-      const regionB = b.region || "";
-      // Current user's region always first
-      const aIsCurrent = regionA === currentRegion;
-      const bIsCurrent = regionB === currentRegion;
-      if (aIsCurrent && !bIsCurrent) return -1;
-      if (!aIsCurrent && bIsCurrent) return 1;
-      const regionCmp = regionA.localeCompare(regionB);
-      if (regionCmp !== 0) return regionCmp;
+    // Čakajúce na vrch: reporters with pending topics first
+    if (cakajuceNaVrch) {
+      const aHasCaka = getReporterTemy(a.id).some((t) => t.stav === "caka");
+      const bHasCaka = getReporterTemy(b.id).some((t) => t.stav === "caka");
+      if (aHasCaka && !bHasCaka) return -1;
+      if (!aHasCaka && bHasCaka) return 1;
     }
+    // Alphabetical
     return a.priezvisko.localeCompare(b.priezvisko);
   });
 
-  // Group reporters by region when sorting by region
+  // Simple flat list (no region grouping)
   const reporterGroups: {
     region: string | null;
     reporters: typeof sortedFilteredReporters;
-  }[] = [];
-  if (sortMode === "region") {
-    const groupMap = new Map<string, typeof sortedFilteredReporters>();
-    for (const r of sortedFilteredReporters) {
-      const key = r.region || "Bez regiónu";
-      if (!groupMap.has(key)) groupMap.set(key, []);
-      groupMap.get(key)!.push(r);
-    }
-    // Current user's region first
-    const currentRegionKey = currentProfile.region || "Bez regiónu";
-    if (groupMap.has(currentRegionKey)) {
-      reporterGroups.push({
-        region: currentRegionKey,
-        reporters: groupMap.get(currentRegionKey)!,
-      });
-    }
-    for (const [region, reporters] of groupMap) {
-      if (region === currentRegionKey) continue;
-      reporterGroups.push({ region, reporters });
-    }
-  } else {
-    reporterGroups.push({ region: null, reporters: sortedFilteredReporters });
-  }
+  }[] = [{ region: null, reporters: sortedFilteredReporters }];
 
   const handleSchvalenie = async () => {
     if (!schvalovaniModal) return;
@@ -591,8 +606,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
                           className="text-xs sm:text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-200 text-gray-700 w-full sm:max-w-50"
                         >
                           <option value="">— Neobsadené —</option>
-                          {allProfiles
-                            .filter((p) => !isOnlyReporter(p))
+                          {getProfilesForPozicia(allProfiles, pozicia)
                             .sort((a, b) =>
                               a.priezvisko.localeCompare(b.priezvisko),
                             )
@@ -645,8 +659,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
                           className="text-xs sm:text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-200 text-gray-700 w-full sm:max-w-50"
                         >
                           <option value="">— Neobsadené —</option>
-                          {allProfiles
-                            .filter((p) => !isOnlyReporter(p))
+                          {getProfilesForPozicia(allProfiles, pozicia)
                             .sort((a, b) =>
                               a.priezvisko.localeCompare(b.priezvisko),
                             )
@@ -681,111 +694,20 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
 
       {/* Reporters & Themes */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-900">Reportéri</h3>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-              {sortedFilteredReporters.length}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() =>
-                setSortMode(
-                  sortMode === "alphabetical" ? "region" : "alphabetical",
-                )
-              }
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                sortMode === "region"
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <ArrowUpDown className="w-3.5 h-3.5" />
-              {sortMode === "region" ? "Podľa regiónu" : "Abecedne"}
-            </button>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                showFilters ||
-                filterRegion !== "all" ||
-                filterStav !== "all" ||
-                filterTemaStav !== "all"
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              Filter
-            </button>
-          </div>
-        </div>
-
-        {/* Filter Panel */}
-        {showFilters && (
-          <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Region */}
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
-                  Región
-                </label>
-                <select
-                  value={filterRegion}
-                  onChange={(e) => setFilterRegion(e.target.value)}
-                  className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-200 text-gray-700"
-                >
-                  <option value="all">Všetky regióny</option>
-                  {uniqueRegions.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Working status */}
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
-                  Stav
-                </label>
-                <select
-                  value={filterStav}
-                  onChange={(e) => setFilterStav(e.target.value)}
-                  className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-200 text-gray-700"
-                >
-                  <option value="all">Všetky stavy</option>
-                  <option value="pracujuci">Pracujúci</option>
-                  <option value="nepracujuci">Nepracujúci</option>
-                  <option value="volno">Voľno</option>
-                </select>
-              </div>
-
-              {/* Topic status */}
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
-                  Témy
-                </label>
-                <select
-                  value={filterTemaStav}
-                  onChange={(e) => setFilterTemaStav(e.target.value)}
-                  className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-200 text-gray-700"
-                >
-                  <option value="all">Všetky témy</option>
-                  <option value="caka">Čaká na schválenie</option>
-                  <option value="schvalene">Schválené</option>
-                  <option value="neschvalene">Neschválené</option>
-                </select>
-              </div>
+        {/* Filter bar */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-gray-900">Reportéri</h3>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                {sortedFilteredReporters.length}
+              </span>
             </div>
-            {(filterRegion !== "all" ||
-              filterStav !== "all" ||
-              filterTemaStav !== "all") && (
+            {(filterRegion !== "vsetci" || filterStav !== "all") && (
               <button
                 onClick={() => {
-                  setFilterRegion("all");
+                  setFilterRegion("vsetci");
                   setFilterStav("all");
-                  setFilterTemaStav("all");
                 }}
                 className="text-xs text-blue-600 hover:text-blue-700 font-medium"
               >
@@ -793,7 +715,117 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
               </button>
             )}
           </div>
-        )}
+
+          {/* Filters row: region + stav + čakajúce toggle + uložiť toggle */}
+          <div className="flex flex-col sm:flex-row gap-5 sm:items-center sm:flex-wrap">
+            {/* Region segmented control */}
+            <div className="flex bg-gray-100 rounded-xl p-1 w-full sm:w-auto">
+              {(
+                [
+                  { value: "vsetci", label: "Všetci" },
+                  { value: "bratislavski", label: "Bratislavskí" },
+                  { value: "regionalny", label: "Regionálni" },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFilterRegion(opt.value)}
+                  className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    filterRegion === opt.value
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="hidden sm:block w-px h-6 bg-gray-200" />
+
+            {/* Work status pills */}
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  {
+                    value: "all",
+                    label: "Všetci",
+                    color: "bg-gray-100 text-gray-600",
+                    activeColor: "bg-gray-800 text-white",
+                  },
+                  {
+                    value: "pracujuci",
+                    label: "Pracujúci",
+                    color: "bg-green-50 text-green-600",
+                    activeColor: "bg-green-600 text-white",
+                  },
+                  {
+                    value: "nepracujuci",
+                    label: "Nepracujúci",
+                    color: "bg-red-50 text-red-600",
+                    activeColor: "bg-red-600 text-white",
+                  },
+                  {
+                    value: "volno",
+                    label: "Voľno",
+                    color: "bg-gray-50 text-gray-500",
+                    activeColor: "bg-gray-500 text-white",
+                  },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFilterStav(opt.value)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                    filterStav === opt.value
+                      ? opt.activeColor
+                      : opt.color + " hover:opacity-80"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="hidden sm:block w-px h-6 bg-gray-200" />
+
+            {/* Čakajúce na vrch toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCakajuceNaVrch(!cakajuceNaVrch)}
+                className={`relative w-8 h-4.5 rounded-full transition-colors ${
+                  cakajuceNaVrch ? "bg-blue-600" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform ${
+                    cakajuceNaVrch ? "translate-x-3.5" : ""
+                  }`}
+                />
+              </button>
+              <span className="text-xs text-gray-600">Čakajúce na vrch</span>
+            </div>
+
+            <div className="hidden sm:block w-px h-6 bg-gray-200" />
+
+            {/* Uložiť filtre toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setUlozitFiltre(!ulozitFiltre)}
+                className={`relative w-8 h-4.5 rounded-full transition-colors ${
+                  ulozitFiltre ? "bg-amber-500" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform ${
+                    ulozitFiltre ? "translate-x-3.5" : ""
+                  }`}
+                />
+              </button>
+              <span className="text-xs text-gray-600">Uložiť filtre</span>
+            </div>
+          </div>
+        </div>
 
         {initialLoad ? (
           <div className="flex justify-center py-12">
@@ -805,14 +837,6 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
           >
             {reporterGroups.map((group) => (
               <div key={group.region || "all"} className="space-y-3">
-                {sortMode === "region" && group.region && (
-                  <div className="flex items-center gap-3 pt-2">
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider pl-1 pr-2">
-                      {group.region}
-                    </span>
-                    <div className="h-px flex-1 bg-gray-200" />
-                  </div>
-                )}
                 {group.reporters.map((reporter) => {
                   const reporterTemy = getReporterTemy(reporter.id);
                   const stav = getReporterStav(reporter.id);

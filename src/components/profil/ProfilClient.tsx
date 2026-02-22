@@ -77,6 +77,8 @@ export function ProfilClient({
   const [meno, setMeno] = useState(profile.meno);
   const [priezvisko, setPriezvisko] = useState(profile.priezvisko);
   const [telefon, setTelefon] = useState(profile.telefon || "");
+  const [region, setRegion] = useState(profile.region || "");
+  const [jeRegionalny, setJeRegionalny] = useState(profile.je_regionalny);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -88,6 +90,11 @@ export function ProfilClient({
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [denneStavyLocal, setDenneStavyLocal] =
     useState<DennyStav[]>(denneStavy);
+
+  // Multi-select state for admin calendar
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
+  const [lastClickedDate, setLastClickedDate] = useState<string | null>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   // Topics filter state
   const [temyFilter, setTemyFilter] = useState<"all" | "mesiac" | "rok">("all");
@@ -128,6 +135,122 @@ export function ProfilClient({
     return paddedDays;
   }, [calendarMonth]);
 
+  // Get all date strings in the current calendar for shift-click range
+  const allCalendarDateStrings = useMemo(() => {
+    return calendarDays
+      .filter((d): d is Date => d !== null)
+      .map((d) => format(d, "yyyy-MM-dd"));
+  }, [calendarDays]);
+
+  const handleDateClick = (dateStr: string, e: React.MouseEvent) => {
+    if (!canManageService) return;
+
+    if (e.shiftKey && lastClickedDate) {
+      // Shift+click: select range from lastClickedDate to dateStr
+      const allDates = allCalendarDateStrings;
+      const startIdx = allDates.indexOf(lastClickedDate);
+      const endIdx = allDates.indexOf(dateStr);
+      if (startIdx !== -1 && endIdx !== -1) {
+        const from = Math.min(startIdx, endIdx);
+        const to = Math.max(startIdx, endIdx);
+        const rangeDates = allDates.slice(from, to + 1);
+        setSelectedDates((prev) => {
+          const next = new Set(prev);
+          rangeDates.forEach((d) => next.add(d));
+          return next;
+        });
+      }
+    } else if (e.ctrlKey || e.metaKey) {
+      // Ctrl/Cmd+click: toggle individual date
+      setSelectedDates((prev) => {
+        const next = new Set(prev);
+        if (next.has(dateStr)) {
+          next.delete(dateStr);
+        } else {
+          next.add(dateStr);
+        }
+        return next;
+      });
+      setLastClickedDate(dateStr);
+    } else {
+      // Single click: select only this date
+      setSelectedDates(new Set([dateStr]));
+      setLastClickedDate(dateStr);
+    }
+  };
+
+  const handleBulkSetStav = async (stav: ReporterStav) => {
+    if (selectedDates.size === 0) return;
+    setBulkLoading(true);
+
+    const datesToProcess = Array.from(selectedDates);
+    const newEntries: DennyStav[] = [];
+    const updatedIds = new Map<string, ReporterStav>();
+
+    for (const dateStr of datesToProcess) {
+      const existing = denneStavyLocal.find((s) => s.datum === dateStr);
+
+      if (existing && existing.stav === stav) {
+        continue; // already correct
+      } else if (existing) {
+        await supabase
+          .from("denny_stav")
+          .update({ stav, nastavil_id: currentProfile.id } as any)
+          .eq("id", existing.id);
+        updatedIds.set(existing.id, stav);
+      } else {
+        const { data } = await supabase
+          .from("denny_stav")
+          .insert({
+            reporter_id: profile.id,
+            datum: dateStr,
+            stav,
+            nastavil_id: currentProfile.id,
+          } as any)
+          .select()
+          .single();
+        if (data) newEntries.push(data as unknown as DennyStav);
+      }
+    }
+
+    // Single batched state update
+    setDenneStavyLocal((prev) => [
+      ...prev.map((s) =>
+        updatedIds.has(s.id)
+          ? {
+              ...s,
+              stav: updatedIds.get(s.id)!,
+              nastavil_id: currentProfile.id,
+            }
+          : s,
+      ),
+      ...newEntries,
+    ]);
+    setSelectedDates(new Set());
+    setLastClickedDate(null);
+    setBulkLoading(false);
+  };
+
+  const handleBulkClear = async () => {
+    if (selectedDates.size === 0) return;
+    setBulkLoading(true);
+
+    const deletedIds = new Set<string>();
+    for (const dateStr of selectedDates) {
+      const existing = denneStavyLocal.find((s) => s.datum === dateStr);
+      if (existing) {
+        await supabase.from("denny_stav").delete().eq("id", existing.id);
+        deletedIds.add(existing.id);
+      }
+    }
+
+    // Single batched state update
+    setDenneStavyLocal((prev) => prev.filter((s) => !deletedIds.has(s.id)));
+    setSelectedDates(new Set());
+    setLastClickedDate(null);
+    setBulkLoading(false);
+  };
+
   const getStavForDate = (dateStr: string): ReporterStav | null => {
     const stav = denneStavyLocal.find((s) => s.datum === dateStr);
     return stav?.stav || null;
@@ -140,6 +263,44 @@ export function ProfilClient({
         dateStr >= v.datum_od &&
         dateStr <= v.datum_do,
     );
+  };
+
+  // Force set stav (no toggle-off) — used by bulk actions
+  const handleForceSetStav = async (dateStr: string, stav: ReporterStav) => {
+    const existing = denneStavyLocal.find((s) => s.datum === dateStr);
+
+    if (existing && existing.stav === stav) {
+      // Already the same state, do nothing
+      return;
+    } else if (existing) {
+      // Update
+      await supabase
+        .from("denny_stav")
+        .update({ stav, nastavil_id: currentProfile.id } as any)
+        .eq("id", existing.id);
+      setDenneStavyLocal((prev) =>
+        prev.map((s) =>
+          s.id === existing.id
+            ? { ...s, stav, nastavil_id: currentProfile.id }
+            : s,
+        ),
+      );
+    } else {
+      // Insert
+      const { data } = await supabase
+        .from("denny_stav")
+        .insert({
+          reporter_id: profile.id,
+          datum: dateStr,
+          stav,
+          nastavil_id: currentProfile.id,
+        } as any)
+        .select()
+        .single();
+      if (data) {
+        setDenneStavyLocal((prev) => [...prev, data as unknown as DennyStav]);
+      }
+    }
   };
 
   const handleSetStav = async (dateStr: string, stav: ReporterStav) => {
@@ -208,7 +369,13 @@ export function ProfilClient({
 
     const { error: err } = await supabase
       .from("profiles")
-      .update({ meno, priezvisko, telefon: telefon || null } as any)
+      .update({
+        meno,
+        priezvisko,
+        telefon: telefon || null,
+        region: region || null,
+        je_regionalny: jeRegionalny,
+      } as any)
       .eq("id", profile.id);
 
     if (err) {
@@ -274,7 +441,7 @@ export function ProfilClient({
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 relative">
       {/* Profile Header */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex items-center gap-4">
@@ -333,7 +500,7 @@ export function ProfilClient({
             { key: "calendar", label: "Kalendár", icon: CalendarDays },
             { key: "temy", label: "Témy", icon: FileText },
             { key: "volna", label: "Voľná", icon: Calendar },
-            ...(isOwnProfile
+            ...(isOwnProfile || isAdminUser
               ? [{ key: "settings" as const, label: "Nastavenia", icon: User }]
               : []),
           ] as const
@@ -375,6 +542,27 @@ export function ProfilClient({
           </div>
 
           <div className="p-4">
+            {/* Legend */}
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded bg-green-200" />
+                <span className="text-xs text-gray-500">Pracujúci</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded bg-red-200" />
+                <span className="text-xs text-gray-500">Nepracujúci</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded bg-gray-300" />
+                <span className="text-xs text-gray-500">Voľno</span>
+              </div>
+              {canManageService && (
+                <span className="text-xs text-blue-500 ml-auto">
+                  Klik = 1 deň · Shift = rozsah · Cmd/Ctrl = pridať
+                </span>
+              )}
+            </div>
+
             {/* Day names header */}
             <div className="grid grid-cols-7 gap-1 mb-1">
               {DAY_NAMES.map((d) => (
@@ -415,33 +603,24 @@ export function ProfilClient({
                   bgColor = "bg-gray-100 text-gray-400";
                 }
 
+                const isSelected = selectedDates.has(dateStr);
+
                 return (
                   <button
                     key={dateStr}
-                    onClick={() => {
+                    onClick={(e) => {
                       if (canManageService) {
-                        // Cycle: none -> pracujuci -> nepracujuci -> volno -> none
-                        const cycle: (ReporterStav | null)[] = [
-                          null,
-                          "pracujuci",
-                          "nepracujuci",
-                          "volno",
-                        ];
-                        const currentIdx = cycle.indexOf(stav);
-                        const nextIdx = (currentIdx + 1) % cycle.length;
-                        const nextStav = cycle[nextIdx];
-                        if (nextStav) {
-                          handleSetStav(dateStr, nextStav);
-                        } else if (stav) {
-                          // Remove
-                          handleSetStav(dateStr, stav); // toggle off
-                        }
+                        handleDateClick(dateStr, e);
                       }
                     }}
                     disabled={!canManageService}
                     className={`aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all ${bgColor} ${
                       !inMonth ? "opacity-40" : ""
-                    } ${current ? "ring-2 ring-blue-500 ring-offset-1" : ""} ${
+                    } ${current && !isSelected ? "ring-2 ring-gray-900 ring-offset-1" : ""} ${
+                      isSelected
+                        ? "ring-2 ring-blue-500 bg-blue-50 text-blue-700!"
+                        : ""
+                    } ${
                       canManageService ? "cursor-pointer" : "cursor-default"
                     }`}
                     title={
@@ -462,65 +641,140 @@ export function ProfilClient({
               })}
             </div>
 
-            {/* Legend */}
-            <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-gray-100">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-green-200" />
-                <span className="text-xs text-gray-500">Pracujúci</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-red-200" />
-                <span className="text-xs text-gray-500">Nepracujúci</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-gray-300" />
-                <span className="text-xs text-gray-500">Voľno</span>
-              </div>
-              {canManageService && (
-                <span className="text-xs text-blue-500 ml-auto">
-                  Kliknite na deň pre nastavenie
-                </span>
-              )}
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-2 mt-3">
-              {(["pracujuci", "nepracujuci", "volno"] as ReporterStav[]).map(
-                (s) => {
-                  const count = denneStavyLocal.filter(
-                    (d) =>
-                      d.stav === s &&
-                      isSameMonth(
-                        new Date(d.datum + "T12:00:00"),
-                        calendarMonth,
-                      ),
-                  ).length;
-                  const label =
-                    s === "pracujuci"
-                      ? "Pracujúcich"
-                      : s === "nepracujuci"
-                        ? "Nepracujúcich"
-                        : "Voľných";
-                  const color =
-                    s === "pracujuci"
-                      ? "text-green-600"
-                      : s === "nepracujuci"
-                        ? "text-red-600"
-                        : "text-gray-500";
-                  return (
-                    <div
-                      key={s}
-                      className="text-center py-2 rounded-lg bg-gray-50"
+            {/* Bulk actions — mobile: horizontal bar, desktop: vertical sticky sidebar */}
+            {canManageService && (
+              <>
+                {/* Mobile horizontal bar */}
+                <div className="mt-4 pt-3 border-t border-gray-100 lg:hidden">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      Vybraných:{" "}
+                      <span className="text-blue-600 font-bold">
+                        {selectedDates.size}
+                      </span>{" "}
+                      {selectedDates.size === 1
+                        ? "deň"
+                        : selectedDates.size < 5
+                          ? "dni"
+                          : "dní"}
+                    </span>
+                    {selectedDates.size > 0 && (
+                      <button
+                        onClick={() => {
+                          setSelectedDates(new Set());
+                          setLastClickedDate(null);
+                        }}
+                        className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        Zrušiť výber
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleBulkSetStav("pracujuci")}
+                      disabled={bulkLoading || selectedDates.size === 0}
+                      className="flex-1 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-40"
                     >
-                      <div className={`text-lg font-bold ${color}`}>
-                        {count}
-                      </div>
-                      <div className="text-xs text-gray-400">{label} dní</div>
-                    </div>
-                  );
-                },
-              )}
+                      Pracujúci
+                    </button>
+                    <button
+                      onClick={() => handleBulkSetStav("nepracujuci")}
+                      disabled={bulkLoading || selectedDates.size === 0}
+                      className="flex-1 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-40"
+                    >
+                      Nepracujúci
+                    </button>
+                    <button
+                      onClick={() => handleBulkSetStav("volno")}
+                      disabled={bulkLoading || selectedDates.size === 0}
+                      className="flex-1 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors disabled:opacity-40"
+                    >
+                      Voľno
+                    </button>
+                    <button
+                      onClick={handleBulkClear}
+                      disabled={bulkLoading || selectedDates.size === 0}
+                      className="py-2 px-3 rounded-lg text-sm font-medium bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors disabled:opacity-40"
+                      title="Odstrániť stav"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop sidebar — sticky next to calendar */}
+      {activeTab === "calendar" && canManageService && (
+        <div className="hidden lg:block fixed top-1/2 -translate-y-1/2 left-[calc(50%+22rem)] z-10">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-3 w-36 space-y-2">
+            <div className="text-center pb-2 border-b border-gray-100">
+              <span className="text-xs font-medium text-gray-400">
+                {selectedDates.size > 0 ? (
+                  <>
+                    <span className="text-lg font-bold text-blue-600 block">
+                      {selectedDates.size}
+                    </span>
+                    {selectedDates.size === 1
+                      ? "vybraný deň"
+                      : selectedDates.size < 5
+                        ? "vybrané dni"
+                        : "vybraných dní"}
+                  </>
+                ) : (
+                  <span className="text-gray-400">Vyberte dni</span>
+                )}
+              </span>
             </div>
+            <div className="space-y-1.5">
+              <button
+                onClick={() => handleBulkSetStav("pracujuci")}
+                disabled={bulkLoading || selectedDates.size === 0}
+                className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" />
+                Pracujúci
+              </button>
+              <button
+                onClick={() => handleBulkSetStav("nepracujuci")}
+                disabled={bulkLoading || selectedDates.size === 0}
+                className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
+                Nepracujúci
+              </button>
+              <button
+                onClick={() => handleBulkSetStav("volno")}
+                disabled={bulkLoading || selectedDates.size === 0}
+                className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-gray-400 shrink-0" />
+                Voľno
+              </button>
+              <button
+                onClick={handleBulkClear}
+                disabled={bulkLoading || selectedDates.size === 0}
+                className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-white text-gray-500 hover:bg-gray-50 border border-gray-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <XCircle className="w-3 h-3 shrink-0" />
+                Vymazať
+              </button>
+            </div>
+            {selectedDates.size > 0 && (
+              <button
+                onClick={() => {
+                  setSelectedDates(new Set());
+                  setLastClickedDate(null);
+                }}
+                className="w-full py-1.5 text-[11px] text-gray-400 hover:text-gray-600 transition-colors text-center"
+              >
+                Zrušiť výber
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -723,8 +977,8 @@ export function ProfilClient({
         </div>
       )}
 
-      {/* Settings Tab (only own profile) */}
-      {activeTab === "settings" && isOwnProfile && (
+      {/* Settings Tab (own profile or admin viewing) */}
+      {activeTab === "settings" && (isOwnProfile || isAdminUser) && (
         <div className="space-y-6">
           {/* Profile Edit */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -793,6 +1047,41 @@ export function ProfilClient({
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-gray-400" />
+                    Región pôsobenia
+                  </div>
+                </label>
+                <input
+                  type="text"
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400"
+                  placeholder="napr. BA, PO, KE..."
+                />
+              </div>
+
+              <div className="flex items-center gap-3 py-1">
+                <button
+                  type="button"
+                  onClick={() => setJeRegionalny(!jeRegionalny)}
+                  className={`relative w-9 h-5 rounded-full transition-colors ${
+                    jeRegionalny ? "bg-amber-500" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
+                      jeRegionalny ? "translate-x-4" : ""
+                    }`}
+                  />
+                </button>
+                <span className="text-sm font-medium text-gray-700">
+                  Regionálny redaktor
+                </span>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
@@ -804,53 +1093,55 @@ export function ProfilClient({
             </form>
           </div>
 
-          {/* Change Password */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Lock className="w-5 h-5 text-gray-400" />
-              Zmena hesla
-            </h3>
+          {/* Change Password (only own profile) */}
+          {isOwnProfile && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Lock className="w-5 h-5 text-gray-400" />
+                Zmena hesla
+              </h3>
 
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Nové heslo
-                </label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400"
-                  placeholder="Minimálne 6 znakov"
-                  required
-                  minLength={6}
-                />
-              </div>
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Nové heslo
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400"
+                    placeholder="Minimálne 6 znakov"
+                    required
+                    minLength={6}
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Potvrdiť heslo
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400"
-                  placeholder="Zopakujte heslo"
-                  required
-                  minLength={6}
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Potvrdiť heslo
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400"
+                    placeholder="Zopakujte heslo"
+                    required
+                    minLength={6}
+                  />
+                </div>
 
-              <button
-                type="submit"
-                disabled={passwordLoading}
-                className="w-full bg-gray-900 text-white py-3 rounded-xl font-medium hover:bg-gray-800 focus:ring-4 focus:ring-gray-200 transition-all disabled:opacity-50"
-              >
-                {passwordLoading ? "Mením heslo..." : "Zmeniť heslo"}
-              </button>
-            </form>
-          </div>
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="w-full bg-gray-900 text-white py-3 rounded-xl font-medium hover:bg-gray-800 focus:ring-4 focus:ring-gray-200 transition-all disabled:opacity-50"
+                >
+                  {passwordLoading ? "Mením heslo..." : "Zmeniť heslo"}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       )}
     </div>

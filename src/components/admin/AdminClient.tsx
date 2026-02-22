@@ -18,6 +18,8 @@ import {
   Pencil,
   X,
   Check,
+  MapPin,
+  Phone,
 } from "lucide-react";
 
 interface AdminClientProps {
@@ -38,6 +40,11 @@ export function AdminClient({ profiles }: AdminClientProps) {
   // Role editing state
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingRoly, setEditingRoly] = useState<UserRole[]>([]);
+  const [editingMeno, setEditingMeno] = useState("");
+  const [editingPriezvisko, setEditingPriezvisko] = useState("");
+  const [editingTelefon, setEditingTelefon] = useState("");
+  const [editingRegion, setEditingRegion] = useState("");
+  const [editingJeRegionalny, setEditingJeRegionalny] = useState(false);
   const [roleLoading, setRoleLoading] = useState(false);
   const supabase = createClient();
   const router = useRouter();
@@ -107,13 +114,20 @@ export function AdminClient({ profiles }: AdminClientProps) {
 
     const { error: err } = await supabase
       .from("profiles")
-      .update({ roly: editingRoly } as any)
+      .update({
+        roly: editingRoly,
+        meno: editingMeno,
+        priezvisko: editingPriezvisko,
+        telefon: editingTelefon || null,
+        region: editingRegion || null,
+        je_regionalny: editingJeRegionalny,
+      } as any)
       .eq("id", profileId);
 
     if (err) {
-      setError("Nepodarilo sa aktualizovať roly");
+      setError("Nepodarilo sa aktualizovať profil");
     } else {
-      setSuccess("Roly boli aktualizované");
+      setSuccess("Profil bol aktualizovaný");
       setEditingUserId(null);
       router.refresh();
     }
@@ -123,6 +137,11 @@ export function AdminClient({ profiles }: AdminClientProps) {
   const startEditingRoles = (profile: Profile) => {
     setEditingUserId(profile.id);
     setEditingRoly(profile.roly || ["reporter"]);
+    setEditingMeno(profile.meno);
+    setEditingPriezvisko(profile.priezvisko);
+    setEditingTelefon(profile.telefon || "");
+    setEditingRegion(profile.region || "");
+    setEditingJeRegionalny(profile.je_regionalny);
   };
 
   return (
@@ -312,7 +331,15 @@ export function AdminClient({ profiles }: AdminClientProps) {
                     <span className="font-medium text-gray-900">
                       {p.meno} {p.priezvisko}
                     </span>
-                    <p className="text-sm text-gray-500">{p.email}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm text-gray-500">{p.email}</p>
+                      {p.je_regionalny && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium flex items-center gap-0.5">
+                          <MapPin className="w-2.5 h-2.5" />
+                          Regionálny
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {editingUserId === p.id ? (
@@ -344,26 +371,114 @@ export function AdminClient({ profiles }: AdminClientProps) {
                 )}
               </div>
 
-              {/* Role badges / editing */}
+              {/* Profile editing */}
               {editingUserId === p.id ? (
-                <div className="mt-3 ml-13">
-                  <div className="flex flex-wrap gap-2">
-                    {ALL_ROLES.map((role) => (
-                      <button
-                        key={role}
-                        type="button"
-                        onClick={() =>
-                          toggleRole(role, editingRoly, setEditingRoly)
-                        }
-                        className={`text-xs px-3 py-1.5 rounded-full font-medium border-2 transition-all ${
-                          editingRoly.includes(role)
-                            ? `${rolaColors[role]} border-current`
-                            : "bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300"
+                <div className="mt-3 ml-13 space-y-3">
+                  {/* Name fields */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        Meno
+                      </label>
+                      <input
+                        type="text"
+                        value={editingMeno}
+                        onChange={(e) => setEditingMeno(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-200 text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        Priezvisko
+                      </label>
+                      <input
+                        type="text"
+                        value={editingPriezvisko}
+                        onChange={(e) => setEditingPriezvisko(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-200 text-gray-900"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Telefon + Region */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        <div className="flex items-center gap-1">
+                          <Phone className="w-3 h-3" />
+                          Telefón
+                        </div>
+                      </label>
+                      <input
+                        type="tel"
+                        value={editingTelefon}
+                        onChange={(e) => setEditingTelefon(e.target.value)}
+                        placeholder="+421 ..."
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-200 text-gray-900 placeholder-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          Región
+                        </div>
+                      </label>
+                      <input
+                        type="text"
+                        value={editingRegion}
+                        onChange={(e) => setEditingRegion(e.target.value)}
+                        placeholder="napr. BA, PO..."
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-200 text-gray-900 placeholder-gray-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Roles */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                      Roly
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {ALL_ROLES.map((role) => (
+                        <button
+                          key={role}
+                          type="button"
+                          onClick={() =>
+                            toggleRole(role, editingRoly, setEditingRoly)
+                          }
+                          className={`text-xs px-3 py-1.5 rounded-full font-medium border-2 transition-all ${
+                            editingRoly.includes(role)
+                              ? `${rolaColors[role]} border-current`
+                              : "bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          {rolaLabels[role]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Regional toggle */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditingJeRegionalny(!editingJeRegionalny)
+                      }
+                      className={`relative w-8 h-4.5 rounded-full transition-colors ${
+                        editingJeRegionalny ? "bg-amber-500" : "bg-gray-300"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform ${
+                          editingJeRegionalny ? "translate-x-3.5" : ""
                         }`}
-                      >
-                        {rolaLabels[role]}
-                      </button>
-                    ))}
+                      />
+                    </button>
+                    <span className="text-xs text-gray-600 font-medium">
+                      Regionálny redaktor
+                    </span>
                   </div>
                 </div>
               ) : (
