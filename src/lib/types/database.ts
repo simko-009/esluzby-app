@@ -4,7 +4,7 @@ export type UserRole =
   | "produkcia"
   | "web_editor"
   | "tn_live"
-  | "office_manazerka"
+  | "office_manazer"
   | "reporter";
 
 export const rolaLabels: Record<UserRole, string> = {
@@ -13,7 +13,7 @@ export const rolaLabels: Record<UserRole, string> = {
   produkcia: "Produkcia",
   web_editor: "WEB editor",
   tn_live: "TN Live",
-  office_manazerka: "Office manažérka",
+  office_manazer: "Office manažér",
   reporter: "Reportér",
 };
 
@@ -23,7 +23,7 @@ export const rolaColors: Record<UserRole, string> = {
   produkcia: "bg-pink-100 text-pink-700",
   web_editor: "bg-cyan-100 text-cyan-700",
   tn_live: "bg-red-100 text-red-700",
-  office_manazerka: "bg-emerald-100 text-emerald-700",
+  office_manazer: "bg-emerald-100 text-emerald-700",
   reporter: "bg-blue-100 text-blue-700",
 };
 
@@ -33,7 +33,7 @@ export const ALL_ROLES: UserRole[] = [
   "produkcia",
   "web_editor",
   "tn_live",
-  "office_manazerka",
+  "office_manazer",
   "reporter",
 ];
 
@@ -57,9 +57,14 @@ export function canManage(profile: Profile): boolean {
   return hasAnyRole(profile, ["admin", "veduci_vydania"]);
 }
 
-/** Check if user can set leave (admin, vedúci vydania, or office manažérka) */
+/** Check if user can set leave (admin, vedúci vydania, or office manažér) */
 export function canSetLeave(profile: Profile): boolean {
-  return hasAnyRole(profile, ["admin", "veduci_vydania", "office_manazerka"]);
+  return hasAnyRole(profile, ["admin", "veduci_vydania", "office_manazer"]);
+}
+
+/** Check if user can approve/reject leave (admin or office manažér) */
+export function canApproveLeave(profile: Profile): boolean {
+  return hasAnyRole(profile, ["admin", "office_manazer"]);
 }
 
 /** Check if user is only a reporter (no other roles) */

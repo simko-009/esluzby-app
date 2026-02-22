@@ -33,8 +33,7 @@ export function Navbar({ profile }: NavbarProps) {
 
   const navItems = [
     { href: "/domov", label: "Domov" },
-    { href: "/nove-volno", label: "Nové voľno" },
-    { href: "/volna", label: "Všetky voľná" },
+    { href: "/volna", label: "Voľná" },
   ];
 
   const isActive = (href: string) => pathname === href;
@@ -66,13 +65,15 @@ export function Navbar({ profile }: NavbarProps) {
                 {item.label}
               </Link>
             ))}
-            <button
-              onClick={() => setShowNovaTema(true)}
-              className="ml-1 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Nová téma
-            </button>
+            {hasRole(profile, "reporter") && (
+              <button
+                onClick={() => setShowNovaTema(true)}
+                className="ml-1 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Nová téma
+              </button>
+            )}
           </div>
 
           {/* User Menu */}

@@ -7,7 +7,7 @@ import {
   typVolnaLabels,
   volnoStavLabels,
   hasRole,
-  canManage,
+  canApproveLeave,
 } from "@/lib/types/database";
 import {
   Calendar,
@@ -19,11 +19,14 @@ import {
   MessageSquare,
   Pencil,
   X,
+  PlusCircle,
+  History,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useState, useRef } from "react";
 import type { TypVolna } from "@/lib/types/database";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { NoveVolnoModal } from "@/components/volna/NoveVolnoModal";
 
 interface VolnaClientProps {
   currentProfile: Profile;
@@ -36,7 +39,8 @@ export function VolnaClient({
   volna: initialVolna,
   allProfiles,
 }: VolnaClientProps) {
-  const [filter, setFilter] = useState<"all" | "mine" | "caka">("all");
+  const [filter, setFilter] = useState<"all" | "caka">("all");
+  const [showPast, setShowPast] = useState(false);
   const [volnaList, setVolnaList] = useState<Volno[]>(initialVolna);
   const [schvalovaniModal, setSchvalovaniModal] = useState<{
     volno: Volno;
@@ -49,13 +53,19 @@ export function VolnaClient({
   const [editDatumDo, setEditDatumDo] = useState("");
   const [editDovod, setEditDovod] = useState("");
   const [editTyp, setEditTyp] = useState<TypVolna>("dovolenka");
+  const [showNoveVolno, setShowNoveVolno] = useState(false);
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
 
   const getProfile = (id: string) => allProfiles.find((p) => p.id === id);
 
+  const today = format(new Date(), "yyyy-MM-dd");
+  const isApprover = canApproveLeave(currentProfile);
+
   const filteredVolna = volnaList.filter((v) => {
-    if (filter === "mine") return v.reporter_id === currentProfile.id;
+    // Hide past leaves unless admin/office_manazer toggled "show past"
+    if (!showPast && v.datum_do < today) return false;
+
     if (filter === "caka") return v.stav === "caka";
     return true;
   });
@@ -137,9 +147,6 @@ export function VolnaClient({
     setActionLoading(false);
   };
 
-  const isAdminUser =
-    hasRole(currentProfile, "admin") || canManage(currentProfile);
-
   const stavConfig: Record<
     VolnoStav,
     { label: string; color: string; icon: typeof CheckCircle }
@@ -163,35 +170,59 @@ export function VolnaClient({
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Všetky voľná</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Prehľad naplánovaných voľien
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Všetky voľná</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Prehľad naplánovaných voľien
+          </p>
+        </div>
+        <button
+          onClick={() => setShowNoveVolno(true)}
+          className="px-4 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+        >
+          <PlusCircle className="w-4 h-4" />
+          Nové voľno
+        </button>
       </div>
 
       {/* Filter */}
       <div className="flex gap-2 mb-4 flex-wrap">
-        {(
-          ["all", "mine", ...(isAdminUser ? ["caka" as const] : [])] as const
-        ).map((f) => (
+        {(["all", ...(isApprover ? ["caka" as const] : [])] as const).map(
+          (f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f as any)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                filter === f
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {f === "all" ? "Všetky" : "Na schválenie"}
+              {f === "caka" && (
+                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-yellow-200 text-yellow-800 text-xs">
+                  {volnaList.filter((v) => v.stav === "caka").length}
+                </span>
+              )}
+            </button>
+          ),
+        )}
+
+        {/* Show past leaves toggle - only for admin/office_manazer */}
+        {isApprover && (
           <button
-            key={f}
-            onClick={() => setFilter(f as any)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-              filter === f
-                ? "bg-blue-600 text-white"
+            onClick={() => setShowPast(!showPast)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-1.5 ml-auto ${
+              showPast
+                ? "bg-gray-800 text-white"
                 : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
             }`}
           >
-            {f === "all" ? "Všetky" : f === "mine" ? "Moje" : "Na schválenie"}
-            {f === "caka" && (
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-yellow-200 text-yellow-800 text-xs">
-                {volnaList.filter((v) => v.stav === "caka").length}
-              </span>
-            )}
+            <History className="w-3.5 h-3.5" />
+            Minulé
           </button>
-        ))}
+        )}
       </div>
 
       {filteredVolna.length > 0 ? (
@@ -199,7 +230,7 @@ export function VolnaClient({
           {filteredVolna.map((v) => {
             const reporter = getProfile(v.reporter_id);
             const isMine = v.reporter_id === currentProfile.id;
-            const canDelete = isMine || isAdminUser;
+            const canDelete = isMine || isApprover;
             const stav = stavConfig[v.stav || "caka"];
             const StavIcon = stav.icon;
 
@@ -288,8 +319,8 @@ export function VolnaClient({
                   </div>
 
                   <div className="flex items-center gap-1 ml-2 shrink-0">
-                    {/* Approve/Reject buttons for admin */}
-                    {isAdminUser && v.stav === "caka" && (
+                    {/* Approve/Reject buttons - only for admin/office_manazer */}
+                    {isApprover && v.stav === "caka" && (
                       <>
                         <button
                           onClick={() =>
@@ -364,7 +395,7 @@ export function VolnaClient({
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Poznámka (voliteľné)
+                Komentár (voliteľné)
               </label>
               <textarea
                 value={poznamka}
@@ -374,7 +405,7 @@ export function VolnaClient({
                 placeholder={
                   schvalovaniModal.action === "neschvalene"
                     ? "Dôvod neschválenia..."
-                    : "Poznámka k schváleniu..."
+                    : "Komentár k schváleniu..."
                 }
               />
             </div>
@@ -486,6 +517,12 @@ export function VolnaClient({
           </div>
         </div>
       )}
+
+      {/* Nové voľno Modal */}
+      <NoveVolnoModal
+        isOpen={showNoveVolno}
+        onClose={() => setShowNoveVolno(false)}
+      />
     </div>
   );
 }

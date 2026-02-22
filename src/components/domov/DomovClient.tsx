@@ -683,7 +683,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-900">Reportéri a témy</h3>
+            <h3 className="font-semibold text-gray-900">Reportéri</h3>
             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
               {sortedFilteredReporters.length}
             </span>
