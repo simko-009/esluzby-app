@@ -805,8 +805,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
               <div key={group.region || "all"} className="space-y-3">
                 {sortMode === "region" && group.region && (
                   <div className="flex items-center gap-3 pt-2">
-                    <div className="h-px flex-1 bg-gray-200" />
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider pl-1 pr-2">
                       {group.region}
                     </span>
                     <div className="h-px flex-1 bg-gray-200" />
@@ -829,10 +828,21 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
                     >
                       {reporterTemy.length === 0 ? (
                         /* Compact: no topics - single line */
-                        <div className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3">
+                        <div className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 relative overflow-hidden">
+                          <div
+                            className={
+                              (stav === "nepracujuci"
+                                ? "bg-red-500"
+                                : stav === "volno"
+                                  ? "bg-gray-400"
+                                  : "bg-green-500") +
+                              " absolute left-0 top-0 bottom-0 w-3 rounded-l-xl pointer-events-none"
+                            }
+                            aria-hidden
+                          />
                           <Link
                             href={`/profil?user=${reporter.id}`}
-                            className="group flex items-center gap-2.5 no-underline hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors cursor-pointer"
+                            className="group flex items-center gap-2.5 no-underline hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors cursor-pointer relative z-10"
                           >
                             <div
                               className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
@@ -921,15 +931,26 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
                         >
                           {/* Reporter Header */}
                           <div
-                            className={`flex items-center justify-between p-3 sm:p-4 ${
+                            className={`flex items-center justify-between p-3 sm:p-4 relative overflow-hidden ${
                               reporterTemy.length === 1
                                 ? "md:border-r md:border-b-0 border-b border-gray-50 shrink-0"
                                 : "border-b border-gray-50"
                             }`}
                           >
+                            <div
+                              className={
+                                (stav === "nepracujuci"
+                                  ? "bg-red-500"
+                                  : stav === "volno"
+                                    ? "bg-gray-400"
+                                    : "bg-green-500") +
+                                " absolute left-0 top-0 bottom-0 w-3 rounded-l-xl pointer-events-none"
+                              }
+                              aria-hidden
+                            />
                             <Link
                               href={`/profil?user=${reporter.id}`}
-                              className="group flex items-center gap-3 no-underline rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors cursor-pointer"
+                              className="group flex items-center gap-3 no-underline rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors cursor-pointer relative z-10"
                             >
                               <div
                                 className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
