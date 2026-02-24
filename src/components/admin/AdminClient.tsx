@@ -126,23 +126,17 @@ export function AdminClient({
     if (!res.ok) {
       setError(json.error ?? "Nepodarilo sa vytvoriť účet");
     } else {
-      // Fetch the new profile to add to local state
-      const { data: newProfile } = (await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", json.userId)
-        .single()) as { data: Profile | null };
+      // Realtime subscription will automatically update profilesList when the new profile is inserted
 
-      if (newProfile) {
-        setProfilesList((prev) =>
-          [...prev, newProfile].sort((a, b) =>
-            a.priezvisko.localeCompare(b.priezvisko, "sk"),
-          ),
-        );
-      }
+      const emailStatus =
+        json.emailSent === true
+          ? " Prihlasovacie údaje boli odoslané na email."
+          : json.emailSent === false
+            ? " ⚠️ Účet bol vytvorený, ale email sa nepodarilo odoslať — skontrolujte SMTP nastavenia."
+            : " Email sa odosiela na pozadí.";
 
       setSuccess(
-        `Účet pre ${meno} ${priezvisko} (${email}) bol vytvorený. Prihlasovacie údaje boli odoslané na email.`,
+        `Účet pre ${meno} ${priezvisko} (${email}) bol vytvorený.${emailStatus}`,
       );
       setEmail("");
       setPassword("");

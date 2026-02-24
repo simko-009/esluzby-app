@@ -88,13 +88,14 @@ export type PoziciaTyp =
   | "redaktor_tn_live";
 
 export type TypVolna =
+  | "platene_volno"
+  | "neplatene_volno"
+  | "volno_za_vikend"
   | "dovolenka"
-  | "nahradne_volno"
-  | "sick_day"
-  | "lekar"
-  | "ospravedlnene"
-  | "neospravedlnene"
-  | "ine";
+  | "pn"
+  | "ocr"
+  | "studijne_volno"
+  | "sluzobna_cesta";
 
 export type VolnoStav = "caka" | "schvalene" | "neschvalene";
 
@@ -134,13 +135,14 @@ export function getProfilesForPozicia(
 }
 
 export const typVolnaLabels: Record<TypVolna, string> = {
+  platene_volno: "Platené voľno",
+  neplatene_volno: "Neplatené voľno",
+  volno_za_vikend: "Voľno za víkend",
   dovolenka: "Dovolenka",
-  nahradne_volno: "Náhradné voľno",
-  sick_day: "Sick day",
-  lekar: "Lekár",
-  ospravedlnene: "Ospravedlnené",
-  neospravedlnene: "Neospravedlnené",
-  ine: "Iné",
+  pn: "PN",
+  ocr: "OčR",
+  studijne_volno: "Študijné voľno",
+  sluzobna_cesta: "Služobná cesta",
 };
 
 export const volnoStavLabels: Record<VolnoStav, string> = {

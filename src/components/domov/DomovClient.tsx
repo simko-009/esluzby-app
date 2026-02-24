@@ -22,6 +22,7 @@ import type {
   PoziciaTyp,
   TemaTyp,
   TemaKomentar,
+  Volno,
 } from "@/lib/types/database";
 import {
   poziciaLabels,
@@ -75,6 +76,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
   const [denneStavy, setDenneStavy] = useState<DennyStav[]>([]);
   const [dennePozicie, setDennePozicie] = useState<DennyPozicia[]>([]);
   const [komentare, setKomentare] = useState<TemaKomentar[]>([]);
+  const [schvaleneVolna, setSchvaleneVolna] = useState<Volno[]>([]);
   const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   const [schvalovaniModal, setSchvalovaniModal] = useState<{
@@ -86,6 +88,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
   const [editPopis, setEditPopis] = useState("");
   const [editMiesto, setEditMiesto] = useState("");
   const [editTyp, setEditTyp] = useState<TemaTyp>("reportaz");
+  const [editDatum, setEditDatum] = useState("");
   const [poznamka, setPoznamka] = useState("");
   const [stavLoading, setStavLoading] = useState(false);
   const [novyKomentar, setNovyKomentar] = useState<{
@@ -186,7 +189,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
         setLoading(true);
       }
 
-      const [temyRes, veduciRes, stavyRes, pozicieRes, komentareRes] =
+      const [temyRes, veduciRes, stavyRes, pozicieRes, komentareRes, volnaRes] =
         await Promise.all([
           supabase
             .from("temy")
@@ -197,6 +200,12 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
           supabase.from("denny_stav").select("*").eq("datum", datum),
           supabase.from("denny_pozicie").select("*").eq("datum", datum),
           supabase.from("tema_komentare").select("*").order("created_at"),
+          supabase
+            .from("volna")
+            .select("*")
+            .eq("stav", "schvalene")
+            .lte("datum_od", datum)
+            .gte("datum_do", datum),
         ]);
 
       const temyData = (temyRes.data || []) as unknown as Tema[];
@@ -210,6 +219,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
       setDenneStavy((stavyRes.data || []) as unknown as DennyStav[]);
       setDennePozicie((pozicieRes.data || []) as unknown as DennyPozicia[]);
       setKomentare(filteredKomentare);
+      setSchvaleneVolna((volnaRes.data || []) as unknown as Volno[]);
       setLoading(false);
       setInitialLoad(false);
     },
@@ -269,6 +279,11 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
         { event: "*", schema: "public", table: "tema_komentare" },
         () => fetchData(true),
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "volna" },
+        () => fetchData(true),
+      )
       .subscribe();
 
     return () => {
@@ -279,6 +294,11 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
   const getProfile = (id: string) => allProfiles.find((p) => p.id === id);
 
   const getReporterStav = (reporterId: string): ReporterStav => {
+    // Approved leave overrides the manually-set daily status
+    const hasApprovedLeave = schvaleneVolna.some(
+      (v) => v.reporter_id === reporterId,
+    );
+    if (hasApprovedLeave) return "volno";
     const stav = denneStavy.find((s) => s.reporter_id === reporterId);
     return stav?.stav || "pracujuci";
   };
@@ -392,17 +412,17 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
 
   const handleEditTema = async () => {
     if (!editModal) return;
-    // Prevent editing topics from the past
-    if (editModal.datum && editModal.datum < todayIso) {
+    const isReporterEdit =
+      editModal.reporter_id === currentProfile.id &&
+      isOnlyReporter(currentProfile);
+    // Reporters cannot edit past topics
+    if (isReporterEdit && editModal.datum && editModal.datum < todayIso) {
       alert("Tému z minulosti nemožno upravovať.");
       setEditModal(null);
       return;
     }
     setStavLoading(true);
 
-    const isReporterEdit =
-      editModal.reporter_id === currentProfile.id &&
-      isOnlyReporter(currentProfile);
     const wasApproved =
       editModal.stav === "schvalene" || editModal.stav === "neschvalene";
 
@@ -413,6 +433,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
         popis: editPopis || null,
         miesto: editMiesto || null,
         typ: editTyp,
+        datum: editDatum,
         // Auto-revert to caka when reporter edits approved/rejected topic
         ...(isReporterEdit && wasApproved ? { stav: "caka" } : {}),
       } as any)
@@ -439,6 +460,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
     setEditPopis(tema.popis || "");
     setEditMiesto(tema.miesto || "");
     setEditTyp(tema.typ || "reportaz");
+    setEditDatum(tema.datum);
     setEditModal(tema);
   };
 
@@ -1674,6 +1696,17 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
                   ))}
                 </select>
               </div>
+              <DatePicker
+                value={editDatum}
+                onChange={(v) => {
+                  const isReporter =
+                    editModal?.reporter_id === currentProfile.id &&
+                    isOnlyReporter(currentProfile);
+                  if (isReporter && v < todayIso) return;
+                  setEditDatum(v);
+                }}
+                label="Dátum"
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Názov

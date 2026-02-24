@@ -127,6 +127,25 @@ export function VolnaClient({
       ),
     );
 
+    // Send email notification to the reporter
+    const reporter = getProfile(schvalovaniModal.volno.reporter_id);
+    if (reporter && reporter.email && reporter.id !== currentProfile.id) {
+      fetch("/api/email/volno-stav", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reporterEmail: reporter.email,
+          reporterMeno: `${reporter.meno} ${reporter.priezvisko}`,
+          novyStav: schvalovaniModal.action,
+          zmenilMeno: `${currentProfile.meno} ${currentProfile.priezvisko}`,
+          datumOd: schvalovaniModal.volno.datum_od,
+          datumDo: schvalovaniModal.volno.datum_do,
+          typVolna: schvalovaniModal.volno.typ,
+          poznamka: poznamka || null,
+        }),
+      }).catch((e) => console.error("Email error:", e));
+    }
+
     setSchvalovaniModal(null);
     setPoznamka("");
     setActionLoading(false);
@@ -559,6 +578,7 @@ export function VolnaClient({
       <NoveVolnoModal
         isOpen={showNoveVolno}
         onClose={() => setShowNoveVolno(false)}
+        onSuccess={fetchVolna}
       />
     </div>
   );

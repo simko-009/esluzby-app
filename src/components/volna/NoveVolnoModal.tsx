@@ -12,9 +12,14 @@ import { DatePicker } from "@/components/ui/DatePicker";
 interface NoveVolnoModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function NoveVolnoModal({ isOpen, onClose }: NoveVolnoModalProps) {
+export function NoveVolnoModal({
+  isOpen,
+  onClose,
+  onSuccess,
+}: NoveVolnoModalProps) {
   const [datumOd, setDatumOd] = useState(format(new Date(), "yyyy-MM-dd"));
   const [datumDo, setDatumDo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [typ, setTyp] = useState<TypVolna>("dovolenka");
@@ -85,6 +90,7 @@ export function NoveVolnoModal({ isOpen, onClose }: NoveVolnoModalProps) {
       setError("Nepodarilo sa pridať voľno. Skúste znova.");
       setLoading(false);
     } else {
+      onSuccess?.();
       setSuccess(true);
       setLoading(false);
     }
