@@ -48,13 +48,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: createError.message }, { status: 400 });
   }
 
-  // Send welcome email via Gmail
-  try {
-    await sendMail({
-      from: FROM,
-      to: email,
-      subject: "Váš účet v e-jano bol vytvorený",
-      html: `
+  // Send welcome email via Gmail (fire-and-forget — don't block the response)
+  sendMail({
+    from: FROM,
+    to: email,
+    subject: "Váš účet v e-jano bol vytvorený",
+    html: `
         <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
           <h2 style="color: #1d4ed8;">Vitajte v e-jano, ${meno}!</h2>
           <p>Bol vám vytvorený účet. Tu sú vaše prihlasovacie údaje:</p>
@@ -73,11 +72,9 @@ export async function POST(req: NextRequest) {
           <p style="color: #64748b; font-size: 13px;">Tento email bol odoslaný automaticky. Neodpovedajte naň.</p>
         </div>
       `,
-    });
-  } catch (mailError) {
+  }).catch((mailError) => {
     console.error("Failed to send welcome email:", mailError);
-    // Don't fail the whole request if mail fails — user was created successfully
-  }
+  });
 
   return NextResponse.json({ userId: newUser.user?.id }, { status: 201 });
 }
