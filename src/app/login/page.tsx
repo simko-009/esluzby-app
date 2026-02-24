@@ -35,14 +35,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 to-slate-100 px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white rounded-2xl shadow-xl p-8 pt-12">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-4">
-              <Tv className="w-8 h-8 text-white" />
-            </div>
+            <img src="/logo.png" alt="Logo" className="w-18 mr-5 flex mb-4" />
             <span className="flex items-end">
               <h1 className="text-3xl font-extrabold text-gray-900">e-jano</h1>
 

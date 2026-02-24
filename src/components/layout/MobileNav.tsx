@@ -113,9 +113,8 @@ export function MobileNav({ profile }: MobileNavProps) {
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Tv className="w-5 h-5 text-white" />
-                </div>
+                <img src="/logo.png" alt="Logo" className="w-9" />
+
                 <span>
                   <span className="text-lg font-bold text-gray-900">
                     e-jano
