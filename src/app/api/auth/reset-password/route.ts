@@ -31,7 +31,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (!error && data?.properties?.action_link) {
-      const resetLink = data.properties.action_link;
+      // Supabase embeds its configured Site URL as the `redirect_to` param inside
+      // the action_link regardless of what we pass in `options.redirectTo` when the
+      // Site URL in the project settings is still localhost:3000.
+      // We rewrite the redirect_to param here to guarantee it always points to
+      // the real production URL.
+      const rawLink = new URL(data.properties.action_link);
+      rawLink.searchParams.set("redirect_to", redirectTo);
+      const resetLink = rawLink.toString();
       const meta = data.user?.user_metadata;
       const userName = meta?.meno
         ? `${escapeHtml(meta.meno)} ${escapeHtml(meta.priezvisko ?? "")}`.trim()

@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { Lock, Eye, EyeOff, CheckCircle, Tv } from "lucide-react";
+import { Lock, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
+import Link from "next/link";
 
 export default function ObnovitHesloPage() {
   const [password, setPassword] = useState("");
@@ -13,12 +14,22 @@ export default function ObnovitHesloPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-  const [sessionReady, setSessionReady] = useState(false);
+  // null = still waiting, true = ready, false = link invalid/expired
+  const [sessionReady, setSessionReady] = useState<boolean | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
-  // Wait for the PKCE code exchange to complete via the middleware / auth state change
   useEffect(() => {
+    // First: check the URL hash for an error from Supabase (e.g. expired OTP)
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    const hashError = params.get("error_code") ?? params.get("error");
+    if (hashError) {
+      setSessionReady(false);
+      return;
+    }
+
+    // Listen for PASSWORD_RECOVERY event fired when Supabase exchanges the hash token
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
@@ -27,12 +38,20 @@ export default function ObnovitHesloPage() {
       }
     });
 
-    // Also check if session already exists (code already exchanged by middleware)
+    // Also catch an already-active session (e.g. PKCE exchanged by middleware)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setSessionReady(true);
     });
 
-    return () => subscription.unsubscribe();
+    // If nothing fires after 10 s the link is likely invalid
+    const timer = setTimeout(() => {
+      setSessionReady((prev) => (prev === null ? false : prev));
+    }, 10_000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
   }, [supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,7 +111,26 @@ export default function ObnovitHesloPage() {
                 Presmerovávam vás na domovskú stránku…
               </p>
             </div>
-          ) : !sessionReady ? (
+          ) : sessionReady === false ? (
+            <div className="text-center">
+              <div className="flex justify-center mb-4">
+                <XCircle className="w-16 h-16 text-red-500" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Odkaz je neplatný alebo vypršal
+              </h2>
+              <p className="text-gray-500 text-sm mb-6">
+                Platnosť odkazu na obnovu hesla je 1 hodina. Požiadajte o nový
+                odkaz.
+              </p>
+              <Link
+                href="/zabudnute-heslo"
+                className="inline-block bg-blue-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors text-sm"
+              >
+                Požiadať o nový odkaz
+              </Link>
+            </div>
+          ) : sessionReady === null ? (
             <div className="text-center py-8">
               <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
               <p className="text-gray-500 text-sm">Overujem odkaz…</p>
