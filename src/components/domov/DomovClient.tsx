@@ -294,6 +294,25 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
     };
   }, [datum, supabase, fetchData]);
 
+  // On mobile the WebSocket drops when the app goes to background.
+  // Refetch as soon as the tab/app becomes visible again or network reconnects.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchData(true);
+      }
+    };
+    const handleOnline = () => fetchData(true);
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
+    };
+  }, [fetchData]);
+
   const getProfile = (id: string) => allProfiles.find((p) => p.id === id);
 
   const getReporterStav = (reporterId: string): ReporterStav => {

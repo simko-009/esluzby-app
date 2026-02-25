@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Tv } from "lucide-react";
-import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -125,15 +124,6 @@ export default function LoginPage() {
               {loading ? "Prihlasujem..." : "Prihlásiť sa"}
             </button>
           </form>
-
-          <div className="mt-6 text-center">
-            <Link
-              href="/zabudnute-heslo"
-              className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
-            >
-              Zabudnuté heslo?
-            </Link>
-          </div>
         </div>
       </div>
     </div>

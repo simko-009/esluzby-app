@@ -124,10 +124,10 @@ export default function ObnovitHesloPage() {
                 odkaz.
               </p>
               <Link
-                href="/zabudnute-heslo"
+                href="/login"
                 className="inline-block bg-blue-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors text-sm"
               >
-                Požiadať o nový odkaz
+                Späť na prihlásenie
               </Link>
             </div>
           ) : sessionReady === null ? (

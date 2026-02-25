@@ -72,6 +72,25 @@ export function VolnaClient({
     };
   }, [supabase, fetchVolna]);
 
+  // On mobile the WebSocket drops when the app goes to background.
+  // Refetch as soon as the tab/app becomes visible again or network reconnects.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchVolna();
+      }
+    };
+    const handleOnline = () => fetchVolna();
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
+    };
+  }, [fetchVolna]);
+
   const getProfile = (id: string) => allProfiles.find((p) => p.id === id);
 
   const today = format(new Date(), "yyyy-MM-dd");
