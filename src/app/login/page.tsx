@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Tv } from "lucide-react";
@@ -14,6 +14,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+
+  // If Supabase redirected to /login with a recovery token in the hash
+  // (happens when the Site URL fallback is used instead of redirect_to),
+  // forward to /obnovit-heslo so the token gets handled correctly.
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    const params = new URLSearchParams(hash);
+    if (params.get("type") === "recovery") {
+      router.replace(`/obnovit-heslo${window.location.hash}`);
+    }
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
