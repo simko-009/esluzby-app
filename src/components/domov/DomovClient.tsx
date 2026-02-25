@@ -28,7 +28,9 @@ import {
   poziciaLabels,
   temaTypLabels,
   hasRole,
-  canManage,
+  canEditTable,
+  canApproveTopics,
+  canChangeReporterStatus,
   isOnlyReporter,
   rolaLabels,
   rolaColors,
@@ -170,7 +172,8 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
   const supabase = supabaseRef.current;
   const scrollRestoreRef = useRef<number | null>(null);
 
-  const isVeduci = canManage(currentProfile);
+  const isVeduci = canEditTable(currentProfile);
+  const canSetReporterStatus = canChangeReporterStatus(currentProfile);
   const isVeduciDna = veduciDna.some((v) => v.veduci_id === currentProfile.id);
 
   // Restore scroll position synchronously after DOM update (before paint)
@@ -1060,7 +1063,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
                                   <PlusCircle className="w-4 h-4 text-white" />
                                 </button>
                               )}
-                            {isVeduci && (
+                            {canSetReporterStatus && (
                               <div className="flex items-center gap-1">
                                 {(
                                   [
@@ -1093,7 +1096,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
                         <div
                           className={
                             reporterTemy.length === 1
-                              ? `flex flex-col md:flex-row ${isVeduci ? "pr-4" : "pr-0.5"}`
+                              ? `flex flex-col md:flex-row ${canSetReporterStatus ? "pr-4" : "pr-0.5"}`
                               : ""
                           }
                         >
@@ -1180,33 +1183,34 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
                                   </button>
                                 )}
 
-                              {isVeduci && reporterTemy.length !== 1 && (
-                                <div className="flex items-center gap-1">
-                                  {(
-                                    [
-                                      "pracujuci",
-                                      "nepracujuci",
-                                      "volno",
-                                    ] as ReporterStav[]
-                                  ).map((s) => {
-                                    const cfg = reporterStavConfig[s];
-                                    return (
-                                      <button
-                                        key={s}
-                                        onClick={() =>
-                                          handleReporterStav(reporter.id, s)
-                                        }
-                                        className={`w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center ${
-                                          stav === s
-                                            ? `${cfg.dot} border-transparent scale-110`
-                                            : `border-gray-300 ${cfg.hoverBorder} ${cfg.hoverBg} hover:scale-115`
-                                        }`}
-                                        title={cfg.label}
-                                      />
-                                    );
-                                  })}
-                                </div>
-                              )}
+                              {canSetReporterStatus &&
+                                reporterTemy.length !== 1 && (
+                                  <div className="flex items-center gap-1">
+                                    {(
+                                      [
+                                        "pracujuci",
+                                        "nepracujuci",
+                                        "volno",
+                                      ] as ReporterStav[]
+                                    ).map((s) => {
+                                      const cfg = reporterStavConfig[s];
+                                      return (
+                                        <button
+                                          key={s}
+                                          onClick={() =>
+                                            handleReporterStav(reporter.id, s)
+                                          }
+                                          className={`w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center ${
+                                            stav === s
+                                              ? `${cfg.dot} border-transparent scale-110`
+                                              : `border-gray-300 ${cfg.hoverBorder} ${cfg.hoverBg} hover:scale-115`
+                                          }`}
+                                          title={cfg.label}
+                                        />
+                                      );
+                                    })}
+                                  </div>
+                                )}
                             </div>
                           </div>
 
@@ -1230,11 +1234,11 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
                                   tema.datum && tema.datum < todayIso;
                                 const canEdit =
                                   (tema.reporter_id === currentProfile.id ||
-                                    hasRole(currentProfile, "admin")) &&
+                                    hasRole(currentProfile, "admin") ||
+                                    hasRole(currentProfile, "tn_live")) &&
                                   !isPastTema;
                                 const canChangeStav =
-                                  isVeduciDna ||
-                                  hasRole(currentProfile, "admin");
+                                  canApproveTopics(currentProfile);
                                 const temaKomentare = getKomentareForTema(
                                   tema.id,
                                 );
@@ -1563,7 +1567,7 @@ export function DomovClient({ currentProfile, allProfiles }: DomovClientProps) {
                                   </button>
                                 )}
 
-                              {isVeduci &&
+                              {canSetReporterStatus &&
                                 (
                                   [
                                     "pracujuci",

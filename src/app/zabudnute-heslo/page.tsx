@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { Mail, Tv, ArrowLeft, CheckCircle } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function ZabudnuteHesloPage() {
@@ -10,28 +9,30 @@ export default function ZabudnuteHesloPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/profil`,
-    });
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-    if (error) {
-      setError("Nepodarilo sa odoslať email. Skontrolujte adresu.");
-      setLoading(false);
-    } else {
+      if (!res.ok) throw new Error();
       setSuccess(true);
+    } catch {
+      setError("Nepodarilo sa odoslať email. Skúste to znova.");
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 to-slate-100 px-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8 pt-12">
           {/* Logo */}
@@ -44,7 +45,6 @@ export default function ZabudnuteHesloPage() {
             <h1 className="text-2xl font-bold text-gray-900">
               Zabudnuté heslo
             </h1>
-            <h1 className="text-6xl font-extrabold text-red-600">NEFUNGUJE!</h1>
             <p className="text-gray-500 mt-1 text-center">
               Zadajte váš email a pošleme vám odkaz na obnovenie hesla
             </p>

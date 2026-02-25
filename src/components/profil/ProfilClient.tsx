@@ -31,8 +31,7 @@ import {
   rolaLabels,
   rolaColors,
   isAdmin as checkIsAdmin,
-  canManage as checkCanManage,
-  canSetLeave,
+  canChangeReporterStatus,
 } from "@/lib/types/database";
 import {
   User,
@@ -110,8 +109,7 @@ export function ProfilClient({
   const router = useRouter();
 
   const isAdminUser = checkIsAdmin(currentProfile);
-  const canManageService =
-    checkCanManage(currentProfile) || canSetLeave(currentProfile);
+  const canManageService = canChangeReporterStatus(currentProfile);
 
   // Calendar helpers
   const calendarDays = useMemo(() => {

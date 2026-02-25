@@ -15,17 +15,12 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Tag,
   MessageSquare,
-  Pencil,
-  X,
   PlusCircle,
   History,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import type { TypVolna } from "@/lib/types/database";
-import { DatePicker } from "@/components/ui/DatePicker";
 import Link from "next/link";
 import { NoveVolnoModal } from "@/components/volna/NoveVolnoModal";
 
@@ -49,11 +44,6 @@ export function VolnaClient({
   } | null>(null);
   const [poznamka, setPoznamka] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
-  const [editModal, setEditModal] = useState<Volno | null>(null);
-  const [editDatumOd, setEditDatumOd] = useState("");
-  const [editDatumDo, setEditDatumDo] = useState("");
-  const [editDovod, setEditDovod] = useState("");
-  const [editTyp, setEditTyp] = useState<TypVolna>("dovolenka");
   const [showNoveVolno, setShowNoveVolno] = useState(false);
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
@@ -88,7 +78,9 @@ export function VolnaClient({
   const isApprover = canApproveLeave(currentProfile);
 
   const filteredVolna = volnaList.filter((v) => {
-    // Hide past leaves unless admin/office_manazer toggled "show past"
+    // Approved leaves that have already expired are never shown
+    if (v.stav === "schvalene" && v.datum_do < today) return false;
+    // Other past leave requests are hidden unless the approver toggled "show past"
     if (!showPast && v.datum_do < today) return false;
 
     if (filter === "caka") return v.stav === "caka";
@@ -148,46 +140,6 @@ export function VolnaClient({
 
     setSchvalovaniModal(null);
     setPoznamka("");
-    setActionLoading(false);
-  };
-
-  const openEditModal = (v: Volno) => {
-    setEditDatumOd(v.datum_od);
-    setEditDatumDo(v.datum_do);
-    setEditDovod(v.dovod || "");
-    setEditTyp(v.typ || "dovolenka");
-    setEditModal(v);
-  };
-
-  const handleEditVolno = async () => {
-    if (!editModal) return;
-    setActionLoading(true);
-
-    await supabase
-      .from("volna")
-      .update({
-        datum_od: editDatumOd,
-        datum_do: editDatumDo,
-        dovod: editDovod || null,
-        typ: editTyp,
-      } as any)
-      .eq("id", editModal.id);
-
-    setVolnaList((prev) =>
-      prev.map((v) =>
-        v.id === editModal.id
-          ? {
-              ...v,
-              datum_od: editDatumOd,
-              datum_do: editDatumDo,
-              dovod: editDovod || null,
-              typ: editTyp,
-            }
-          : v,
-      ),
-    );
-
-    setEditModal(null);
     setActionLoading(false);
   };
 
@@ -406,15 +358,6 @@ export function VolnaClient({
                     )}
                     {canDelete && (
                       <button
-                        onClick={() => openEditModal(v)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-500 transition-colors"
-                        title="Upraviť"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
                         onClick={() => handleDelete(v.id)}
                         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
                       >
@@ -490,84 +433,6 @@ export function VolnaClient({
                   : schvalovaniModal.action === "schvalene"
                     ? "Schváliť"
                     : "Neschváliť"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Volno Modal */}
-      {editModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-70 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Upraviť voľno
-              </h3>
-              <button
-                onClick={() => setEditModal(null)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Typ voľna
-                </label>
-                <select
-                  value={editTyp}
-                  onChange={(e) => setEditTyp(e.target.value as TypVolna)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm text-gray-900"
-                >
-                  {(Object.keys(typVolnaLabels) as TypVolna[]).map((key) => (
-                    <option key={key} value={key}>
-                      {typVolnaLabels[key]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <DatePicker
-                  value={editDatumOd}
-                  onChange={setEditDatumOd}
-                  label="Od"
-                />
-                <DatePicker
-                  value={editDatumDo}
-                  onChange={setEditDatumDo}
-                  label="Do"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Dôvod (voliteľné)
-                </label>
-                <textarea
-                  value={editDovod}
-                  onChange={(e) => setEditDovod(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm text-gray-900 resize-none"
-                  rows={3}
-                  placeholder="Dôvod voľna..."
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={() => setEditModal(null)}
-                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Zrušiť
-              </button>
-              <button
-                onClick={handleEditVolno}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2.5 bg-blue-600 rounded-xl text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {actionLoading ? "Ukladám..." : "Uložiť"}
               </button>
             </div>
           </div>

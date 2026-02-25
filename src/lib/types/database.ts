@@ -57,6 +57,28 @@ export function canManage(profile: Profile): boolean {
   return hasAnyRole(profile, ["admin", "veduci_vydania"]);
 }
 
+/** Check if user can edit the leaders/positions table (vedenie dňa) */
+export function canEditTable(profile: Profile): boolean {
+  return hasAnyRole(profile, [
+    "admin",
+    "veduci_vydania",
+    "produkcia",
+    "web_editor",
+    "office_manazer",
+    "tn_live",
+  ]);
+}
+
+/** Check if user can approve/reject topics */
+export function canApproveTopics(profile: Profile): boolean {
+  return hasAnyRole(profile, ["admin", "veduci_vydania", "tn_live"]);
+}
+
+/** Check if user can change reporter daily status (pracuje/nepracuje/voľno) */
+export function canChangeReporterStatus(profile: Profile): boolean {
+  return hasAnyRole(profile, ["admin", "office_manazer"]);
+}
+
 /** Check if user can set leave (admin, vedúci vydania, or office manažér) */
 export function canSetLeave(profile: Profile): boolean {
   return hasAnyRole(profile, ["admin", "veduci_vydania", "office_manazer"]);
