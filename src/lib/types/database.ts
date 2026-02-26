@@ -1,6 +1,7 @@
 export type UserRole =
   | "admin"
   | "veduci_vydania"
+  | "editor"
   | "produkcia"
   | "web_editor"
   | "tn_live"
@@ -10,6 +11,7 @@ export type UserRole =
 export const rolaLabels: Record<UserRole, string> = {
   admin: "Admin",
   veduci_vydania: "Vedúci vydania",
+  editor: "Editor",
   produkcia: "Produkcia",
   web_editor: "WEB editor",
   tn_live: "TN Live",
@@ -20,6 +22,7 @@ export const rolaLabels: Record<UserRole, string> = {
 export const rolaColors: Record<UserRole, string> = {
   admin: "bg-purple-100 text-purple-700",
   veduci_vydania: "bg-orange-100 text-orange-700",
+  editor: "bg-indigo-100 text-indigo-700",
   produkcia: "bg-pink-100 text-pink-700",
   web_editor: "bg-cyan-100 text-cyan-700",
   tn_live: "bg-red-100 text-red-700",
@@ -30,6 +33,7 @@ export const rolaColors: Record<UserRole, string> = {
 export const ALL_ROLES: UserRole[] = [
   "admin",
   "veduci_vydania",
+  "editor",
   "produkcia",
   "web_editor",
   "tn_live",
@@ -139,8 +143,8 @@ export const poziciaLabels: Record<PoziciaTyp, string> = {
 export const poziciaRoly: Record<PoziciaTyp, UserRole[]> = {
   veduci_dna: ["veduci_vydania"],
   producent_tn: ["veduci_vydania"],
-  editor: ["veduci_vydania"],
-  pomocny_editor: ["veduci_vydania"],
+  editor: ["veduci_vydania", "editor"],
+  pomocny_editor: ["veduci_vydania", "editor"],
   produkcia_1: ["produkcia"],
   produkcia_2: ["produkcia"],
   web_editor: ["web_editor"],
