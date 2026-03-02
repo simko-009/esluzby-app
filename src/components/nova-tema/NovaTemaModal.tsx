@@ -12,9 +12,17 @@ import { DatePicker } from "@/components/ui/DatePicker";
 interface NovaTemaModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** When set, insert the tema for this reporter instead of the logged-in user */
+  forReporterId?: string;
+  forReporterName?: string;
 }
 
-export function NovaTemaModal({ isOpen, onClose }: NovaTemaModalProps) {
+export function NovaTemaModal({
+  isOpen,
+  onClose,
+  forReporterId,
+  forReporterName,
+}: NovaTemaModalProps) {
   const [nazov, setNazov] = useState("");
   const [popis, setPopis] = useState("");
   const [typ, setTyp] = useState<TemaTyp>("reportaz");
@@ -76,7 +84,7 @@ export function NovaTemaModal({ isOpen, onClose }: NovaTemaModalProps) {
     }
 
     const { error: insertError } = await supabase.from("temy").insert({
-      reporter_id: user.id,
+      reporter_id: forReporterId || user.id,
       datum,
       nazov,
       popis: popis || null,
@@ -127,7 +135,9 @@ export function NovaTemaModal({ isOpen, onClose }: NovaTemaModalProps) {
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Nová téma</h2>
             <p className="text-sm text-gray-500 mt-0.5">
-              Pridajte novú tému na službu
+              {forReporterName
+                ? `Pridať tému za: ${forReporterName}`
+                : "Pridajte novú tému na službu"}
             </p>
           </div>
           <button
@@ -151,7 +161,9 @@ export function NovaTemaModal({ isOpen, onClose }: NovaTemaModalProps) {
                 Téma pridaná!
               </h3>
               <p className="text-gray-500 text-sm mb-6">
-                Vaša téma čaká na schválenie vedúcim dňa.
+                {forReporterName
+                  ? `Téma pre ${forReporterName} čaká na schválenie.`
+                  : "Vaša téma čaká na schválenie vedúcim dňa."}
               </p>
               <div className="flex gap-3">
                 <button

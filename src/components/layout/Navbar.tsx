@@ -50,7 +50,7 @@ export function Navbar({ profile }: NavbarProps) {
             <span className="flex items-center">
               <span className="text-xl font-bold text-gray-900">e-jano</span>
               <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
-                v2 Alpha
+                v2
               </span>
             </span>
           </Link>

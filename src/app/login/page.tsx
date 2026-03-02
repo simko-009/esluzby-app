@@ -56,7 +56,7 @@ export default function LoginPage() {
               <h1 className="text-3xl font-extrabold text-gray-900">e-jano</h1>
 
               <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mb-1">
-                v2 Alpha
+                v2
               </span>
             </span>
             <p className="text-gray-500 mt-1">Prihlásenie do systému</p>

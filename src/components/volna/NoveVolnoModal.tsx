@@ -90,6 +90,27 @@ export function NoveVolnoModal({
       setError("Nepodarilo sa pridať voľno. Skúste znova.");
       setLoading(false);
     } else {
+      // Send email notification to office managers
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("meno, priezvisko")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        fetch("/api/email/volno-nove", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reporterMeno: `${profile.meno} ${profile.priezvisko}`,
+            datumOd,
+            datumDo,
+            typVolna: typ,
+            dovod: dovod || null,
+          }),
+        }).catch((e) => console.error("Email error:", e));
+      }
+
       onSuccess?.();
       setSuccess(true);
       setLoading(false);
