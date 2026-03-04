@@ -23,6 +23,11 @@ interface DatePickerProps {
   placeholder?: string;
   className?: string;
   label?: string;
+  iconOnly?: boolean;
+  children?: (props: {
+    ref: React.RefObject<HTMLButtonElement | null>;
+    toggle: () => void;
+  }) => React.ReactNode;
 }
 
 const DAY_NAMES = ["Po", "Ut", "St", "Št", "Pi", "So", "Ne"];
@@ -33,6 +38,8 @@ export function DatePicker({
   placeholder = "Vyberte dátum",
   className = "",
   label,
+  iconOnly = false,
+  children,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [viewMonth, setViewMonth] = useState(
@@ -122,19 +129,33 @@ export function DatePicker({
           {label}
         </label>
       )}
-      <button
-        type="button"
-        ref={buttonRef}
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 px-4 py-3 border border-gray-200 rounded-xl bg-white text-left focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all hover:border-gray-300"
-      >
-        <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-        {displayValue ? (
-          <span className="text-gray-900 text-sm">{displayValue}</span>
-        ) : (
-          <span className="text-gray-400 text-sm">{placeholder}</span>
-        )}
-      </button>
+      {children ? (
+        children({ ref: buttonRef, toggle: () => setOpen(!open) })
+      ) : iconOnly ? (
+        <button
+          type="button"
+          ref={buttonRef}
+          onClick={() => setOpen(!open)}
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-colors"
+          title="Vybrať dátum"
+        >
+          <Calendar className="w-3.5 h-3.5 text-gray-500" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          ref={buttonRef}
+          onClick={() => setOpen(!open)}
+          className="w-full flex items-center gap-2 px-4 py-3 border border-gray-200 rounded-xl bg-white text-left focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all hover:border-gray-300"
+        >
+          <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+          {displayValue ? (
+            <span className="text-gray-900 text-sm">{displayValue}</span>
+          ) : (
+            <span className="text-gray-400 text-sm">{placeholder}</span>
+          )}
+        </button>
+      )}
 
       {open &&
         popupStyle &&

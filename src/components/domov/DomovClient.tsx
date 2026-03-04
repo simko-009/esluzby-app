@@ -681,12 +681,6 @@ export function DomovClient({
     },
   };
 
-  const formattedDate = format(
-    new Date(datum + "T12:00:00"),
-    "EE, d. MMM yyyy",
-    { locale: sk },
-  );
-
   const todayIso = format(new Date(), "yyyy-MM-dd");
   const tomorrowIso = format(addDays(new Date(), 1), "yyyy-MM-dd");
   const isTodaySelected = datum === todayIso;
@@ -701,8 +695,9 @@ export function DomovClient({
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Date Selector */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-4 flex flex-col justify-between lg:w-72">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white justify-between items-center rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col lg:w-56">
+          {/* Day name + arrows row */}
+          <div className="flex w-full items-center justify-between">
             <button
               onClick={() =>
                 setDatum(
@@ -712,11 +707,13 @@ export function DomovClient({
                   ),
                 )
               }
-              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
-              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
             </button>
-            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+            <span className="font-bold text-md mt-0.5 text-gray-900 capitalize">
+              {format(new Date(datum + "T12:00:00"), "EEEE", { locale: sk })}
+            </span>
             <button
               onClick={() =>
                 setDatum(
@@ -726,26 +723,41 @@ export function DomovClient({
                   ),
                 )
               }
-              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
-              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
+              <ChevronRight className="w-5 h-5 text-gray-600" />
             </button>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center min-h-30">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 capitalize mb-2">
-              {formattedDate}
-            </h2>
-            <DatePicker value={datum} onChange={setDatum} className="mt-2" />
-          </div>
+          {/* Big date number + month — clickable to open calendar */}
+          <DatePicker value={datum} onChange={setDatum}>
+            {({ ref, toggle }) => (
+              <button
+                ref={ref}
+                onClick={toggle}
+                className="group py-3 px-4 flex-1 flex flex-col items-center justify-center w-fit rounded-xl hover:bg-blue-50/60 transition-colors cursor-pointer"
+              >
+                <span className="text-4xl font-extrabold text-blue-600 tracking-tight leading-none ml-1">
+                  {format(new Date(datum + "T12:00:00"), "d")}.
+                </span>
+                <span className="text-sm font-medium text-gray-500 mt-1 pl-0.75 capitalize flex items-center gap-1">
+                  {format(new Date(datum + "T12:00:00"), "LLLL yyyy", {
+                    locale: sk,
+                  })}
+                  <Calendar className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                </span>
+              </button>
+            )}
+          </DatePicker>
 
-          <div className="flex justify-center gap-2 mt-3">
+          {/* Quick buttons row */}
+          <div className="flex items-center justify-center gap-1.5">
             <button
               onClick={() => setDatum(format(new Date(), "yyyy-MM-dd"))}
-              className={`text-xs px-3 py-1 rounded-full font-medium transition-colors whitespace-nowrap ${
+              className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${
                 isTodaySelected
-                  ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               Dnes
@@ -754,10 +766,10 @@ export function DomovClient({
               onClick={() =>
                 setDatum(format(addDays(new Date(), 1), "yyyy-MM-dd"))
               }
-              className={`text-xs px-3 py-1 rounded-full font-medium transition-colors whitespace-nowrap ${
+              className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${
                 isTomorrowSelected
-                  ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               Zajtra
