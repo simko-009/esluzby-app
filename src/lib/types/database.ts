@@ -257,6 +257,7 @@ export interface TemaKomentar {
   tema_id: string;
   autor_id: string;
   text: string;
+  je_hodnotenie: boolean;
   created_at: string;
   // Joined
   autor?: Profile;

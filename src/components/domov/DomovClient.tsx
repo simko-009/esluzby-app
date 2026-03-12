@@ -51,6 +51,7 @@ import {
   Send,
   RotateCcw,
   PlusCircle,
+  Star,
 } from "lucide-react";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { NovaTemaModal } from "@/components/nova-tema/NovaTemaModal";
@@ -100,6 +101,7 @@ export function DomovClient({
   const [novyKomentar, setNovyKomentar] = useState<{
     temaId: string;
     text: string;
+    jeHodnotenie: boolean;
   } | null>(null);
   const [stavChangeModal, setStavChangeModal] = useState<{
     tema: Tema;
@@ -494,12 +496,17 @@ export function DomovClient({
     setEditModal(tema);
   };
 
-  const handleAddKomentar = async (temaId: string, text: string) => {
+  const handleAddKomentar = async (
+    temaId: string,
+    text: string,
+    jeHodnotenie = false,
+  ) => {
     if (!text.trim()) return;
     await supabase.from("tema_komentare").insert({
       tema_id: temaId,
       autor_id: currentProfile.id,
       text: text.trim(),
+      je_hodnotenie: jeHodnotenie,
     } as any);
 
     // Send email notification to the reporter (only if someone else commented)
@@ -518,6 +525,7 @@ export function DomovClient({
             reporterMeno: `${reporter.meno} ${reporter.priezvisko}`,
             autorMeno: `${currentProfile.meno} ${currentProfile.priezvisko}`,
             komentar: text.trim(),
+            jeHodnotenie,
           }),
         }).catch((e) => console.error("Email error:", e));
       }
@@ -1285,55 +1293,100 @@ export function DomovClient({
                                             </div>
                                           )}
 
-                                          {/* Multiple comments */}
+                                          {/* Multiple comments & hodnotenia */}
                                           {temaKomentare.length > 0 && (
                                             <div className="mt-0.5 space-y-0.5">
-                                              {temaKomentare.map((kom) => {
-                                                const autor = getProfile(
-                                                  kom.autor_id,
-                                                );
-                                                return (
-                                                  <div
-                                                    key={kom.id}
-                                                    className="flex items-start gap-1"
-                                                  >
-                                                    <MessageSquare className="w-3 h-3 mt-0.5 shrink-0 opacity-60" />
-                                                    <p className="text-xs">
-                                                      <span className="font-medium opacity-90">
-                                                        {autor
-                                                          ? `${autor.priezvisko} ${autor.meno}`
-                                                          : "Neznámy"}
-                                                        :
-                                                      </span>{" "}
-                                                      <span className="italic opacity-80">
-                                                        {kom.text}
-                                                      </span>
-                                                      <span className="text-[10px] opacity-50 ml-1">
-                                                        {format(
-                                                          new Date(
-                                                            kom.created_at,
-                                                          ),
-                                                          "d.M. HH:mm",
-                                                        )}
-                                                      </span>
-                                                    </p>
-                                                  </div>
-                                                );
-                                              })}
+                                              {temaKomentare
+                                                .filter((k) => !k.je_hodnotenie)
+                                                .map((kom) => {
+                                                  const autor = getProfile(
+                                                    kom.autor_id,
+                                                  );
+                                                  return (
+                                                    <div
+                                                      key={kom.id}
+                                                      className="flex items-start gap-1"
+                                                    >
+                                                      <MessageSquare className="w-3 h-3 mt-0.5 shrink-0 opacity-60" />
+                                                      <p className="text-xs">
+                                                        <span className="font-medium opacity-90">
+                                                          {autor
+                                                            ? `${autor.priezvisko} ${autor.meno}`
+                                                            : "Neznámy"}
+                                                          :
+                                                        </span>{" "}
+                                                        <span className="italic opacity-80">
+                                                          {kom.text}
+                                                        </span>
+                                                        <span className="text-[10px] opacity-50 ml-1">
+                                                          {format(
+                                                            new Date(
+                                                              kom.created_at,
+                                                            ),
+                                                            "d.M. HH:mm",
+                                                          )}
+                                                        </span>
+                                                      </p>
+                                                    </div>
+                                                  );
+                                                })}
+                                              {temaKomentare
+                                                .filter((k) => k.je_hodnotenie)
+                                                .map((kom) => {
+                                                  const autor = getProfile(
+                                                    kom.autor_id,
+                                                  );
+                                                  return (
+                                                    <div
+                                                      key={kom.id}
+                                                      className="flex items-start gap-1 mt-1 px-2 py-1 rounded-lg bg-amber-50 border border-amber-200"
+                                                    >
+                                                      <Star className="w-3 h-3 mt-0.5 shrink-0 text-amber-500" />
+                                                      <p className="text-xs text-amber-900">
+                                                        <span className="font-semibold">
+                                                          Hodnotenie
+                                                        </span>
+                                                        {" · "}
+                                                        <span className="font-medium opacity-90">
+                                                          {autor
+                                                            ? `${autor.priezvisko} ${autor.meno}`
+                                                            : "Neznámy"}
+                                                          :
+                                                        </span>{" "}
+                                                        <span className="italic opacity-80">
+                                                          {kom.text}
+                                                        </span>
+                                                        <span className="text-[10px] opacity-50 ml-1">
+                                                          {format(
+                                                            new Date(
+                                                              kom.created_at,
+                                                            ),
+                                                            "d.M. HH:mm",
+                                                          )}
+                                                        </span>
+                                                      </p>
+                                                    </div>
+                                                  );
+                                                })}
                                             </div>
                                           )}
 
-                                          {/* Inline comment input */}
+                                          {/* Inline comment / hodnotenie input */}
                                           {canChangeStav &&
                                             novyKomentar?.temaId ===
                                               tema.id && (
-                                              <div className="flex items-center gap-1.5 mt-1">
+                                              <div
+                                                className={`flex items-center gap-1.5 mt-1 ${novyKomentar.jeHodnotenie ? "px-2 py-1 rounded-lg bg-amber-50 border border-amber-200" : ""}`}
+                                              >
+                                                {novyKomentar.jeHodnotenie && (
+                                                  <Star className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                                                )}
                                                 <input
                                                   type="text"
                                                   value={novyKomentar.text}
                                                   onChange={(e) =>
                                                     setNovyKomentar({
-                                                      temaId: tema.id,
+                                                      ...novyKomentar,
                                                       text: e.target.value,
                                                     })
                                                   }
@@ -1342,14 +1395,19 @@ export function DomovClient({
                                                       handleAddKomentar(
                                                         tema.id,
                                                         novyKomentar.text,
+                                                        novyKomentar.jeHodnotenie,
                                                       );
                                                     }
                                                     if (e.key === "Escape") {
                                                       setNovyKomentar(null);
                                                     }
                                                   }}
-                                                  placeholder="Napíšte komentár..."
-                                                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-lg outline-none focus:ring-1 focus:ring-blue-300 text-gray-900 placeholder-gray-400 bg-white/80"
+                                                  placeholder={
+                                                    novyKomentar.jeHodnotenie
+                                                      ? "Napíšte hodnotenie..."
+                                                      : "Napíšte komentár..."
+                                                  }
+                                                  className={`flex-1 px-2 py-1 text-xs border rounded-lg outline-none focus:ring-1 ${novyKomentar.jeHodnotenie ? "border-amber-300 focus:ring-amber-300 bg-white text-amber-900 placeholder-amber-400" : "border-gray-300 focus:ring-blue-300 text-gray-900 placeholder-gray-400 bg-white/80"}`}
                                                   autoFocus
                                                 />
                                                 <button
@@ -1357,9 +1415,10 @@ export function DomovClient({
                                                     handleAddKomentar(
                                                       tema.id,
                                                       novyKomentar.text,
+                                                      novyKomentar.jeHodnotenie,
                                                     )
                                                   }
-                                                  className="w-6 h-6 flex items-center justify-center rounded-md bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                                                  className={`w-6 h-6 flex items-center justify-center rounded-md transition-colors ${novyKomentar.jeHodnotenie ? "bg-amber-500 hover:bg-amber-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
                                                   title="Odoslať"
                                                 >
                                                   <Send className="w-3 h-3" />
@@ -1404,18 +1463,34 @@ export function DomovClient({
                                           {canChangeStav &&
                                             novyKomentar?.temaId !==
                                               tema.id && (
-                                              <button
-                                                onClick={() =>
-                                                  setNovyKomentar({
-                                                    temaId: tema.id,
-                                                    text: "",
-                                                  })
-                                                }
-                                                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-white/50 transition-colors"
-                                                title="Pridať komentár"
-                                              >
-                                                <MessageSquare className="w-3 h-3" />
-                                              </button>
+                                              <>
+                                                <button
+                                                  onClick={() =>
+                                                    setNovyKomentar({
+                                                      temaId: tema.id,
+                                                      text: "",
+                                                      jeHodnotenie: false,
+                                                    })
+                                                  }
+                                                  className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-white/50 transition-colors"
+                                                  title="Pridať komentár"
+                                                >
+                                                  <MessageSquare className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                  onClick={() =>
+                                                    setNovyKomentar({
+                                                      temaId: tema.id,
+                                                      text: "",
+                                                      jeHodnotenie: true,
+                                                    })
+                                                  }
+                                                  className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-amber-50 text-amber-500 transition-colors"
+                                                  title="Pridať hodnotenie"
+                                                >
+                                                  <Star className="w-3 h-3" />
+                                                </button>
+                                              </>
                                             )}
                                           {canChangeStav &&
                                             tema.stav === "caka" && (
@@ -1746,6 +1821,7 @@ export function DomovClient({
         }}
         forReporterId={novaTemaForReporter?.id}
         forReporterName={novaTemaForReporter?.name}
+        selectedDatum={datum}
       />
     </div>
   );

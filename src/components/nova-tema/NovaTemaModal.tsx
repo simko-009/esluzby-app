@@ -15,6 +15,8 @@ interface NovaTemaModalProps {
   /** When set, insert the tema for this reporter instead of the logged-in user */
   forReporterId?: string;
   forReporterName?: string;
+  /** Pre-selected date (yyyy-MM-dd) from the parent view */
+  selectedDatum?: string;
 }
 
 export function NovaTemaModal({
@@ -22,6 +24,7 @@ export function NovaTemaModal({
   onClose,
   forReporterId,
   forReporterName,
+  selectedDatum,
 }: NovaTemaModalProps) {
   const [nazov, setNazov] = useState("");
   const [popis, setPopis] = useState("");
@@ -41,7 +44,7 @@ export function NovaTemaModal({
       setPopis("");
       setTyp("reportaz");
       setMiesto("");
-      setDatum(format(new Date(), "yyyy-MM-dd"));
+      setDatum(selectedDatum || format(new Date(), "yyyy-MM-dd"));
       setSuccess(false);
       setError("");
     }

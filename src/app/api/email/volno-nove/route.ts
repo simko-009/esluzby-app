@@ -39,8 +39,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, sent: 0 });
   }
 
-  const officeManagers = (profiles as unknown as Profile[]).filter(
-    (p) => hasRole(p, "office_manazer") || hasRole(p, "admin"),
+  const officeManagers = (profiles as unknown as Profile[]).filter((p) =>
+    hasRole(p, "office_manazer"),
   );
 
   // Don't send notification to the person who created the leave request

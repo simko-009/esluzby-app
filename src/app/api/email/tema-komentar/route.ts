@@ -10,6 +10,7 @@ interface RequestBody {
   reporterMeno: string;
   autorMeno: string;
   komentar: string;
+  jeHodnotenie?: boolean;
 }
 
 export async function POST(req: NextRequest) {
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
     reporterMeno,
     autorMeno,
     komentar,
+    jeHodnotenie,
   } = body;
 
   if (!temaId || !temaNazov || !reporterEmail || !autorMeno || !komentar) {
@@ -41,12 +43,15 @@ export async function POST(req: NextRequest) {
   }
 
   const threadRefId = temaMessageId(temaId);
+  const label = jeHodnotenie ? "Hodnotenie" : "Komentár";
+  const headerColor = jeHodnotenie ? "#f59e0b" : "#3b82f6";
+  const accentColor = jeHodnotenie ? "#f59e0b" : "#3b82f6";
 
   try {
     await sendMail({
       from: FROM,
       to: reporterEmail,
-      subject: `Re: Komentár k téme: ${temaNazov}`,
+      subject: `Re: ${label} k téme: ${temaNazov}`,
       // Thread headers — links this reply into the same conversation as the approval email
       headers: {
         "In-Reply-To": threadRefId,
@@ -54,12 +59,12 @@ export async function POST(req: NextRequest) {
       },
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; color: #1e293b;">
-          <div style="background: #3b82f6; padding: 16px 24px; border-radius: 12px 12px 0 0;">
-            <h2 style="margin: 0; color: #fff; font-size: 18px;">Nový komentár k téme</h2>
+          <div style="background: ${headerColor}; padding: 16px 24px; border-radius: 12px 12px 0 0;">
+            <h2 style="margin: 0; color: #fff; font-size: 18px;">Nov${jeHodnotenie ? "é hodnotenie" : "ý komentár"} k téme</h2>
           </div>
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px; padding: 24px;">
             <p style="margin-top: 0;">Ahoj <strong>${reporterMeno}</strong>,</p>
-            <p>K tvojej téme bol pridaný nový komentár.</p>
+            <p>K tvojej téme bol${jeHodnotenie ? "o pridané nové hodnotenie" : " pridaný nový komentár"}.</p>
 
             <table style="width:100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
               <tr>
@@ -72,8 +77,8 @@ export async function POST(req: NextRequest) {
               </tr>
             </table>
 
-            <div style="border-left: 3px solid #3b82f6; padding: 12px 16px; background: #fff; border-radius: 0 8px 8px 0; margin-top: 16px;">
-              <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 600; color: #3b82f6;">${autorMeno}</p>
+            <div style="border-left: 3px solid ${accentColor}; padding: 12px 16px; background: ${jeHodnotenie ? "#fffbeb" : "#fff"}; border-radius: 0 8px 8px 0; margin-top: 16px;">
+              <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 600; color: ${accentColor};">${jeHodnotenie ? "⭐ " : ""}${autorMeno}${jeHodnotenie ? " · Hodnotenie" : ""}</p>
               <p style="margin: 0; font-size: 14px; color: #1e293b;">"${komentar}"</p>
             </div>
 
