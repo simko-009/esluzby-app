@@ -1,18 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserAndProfile } from "@/lib/supabase/current-user";
 import { VolnaClient } from "@/components/volna/VolnaClient";
 import type { Profile, Volno } from "@/lib/types/database";
+import { redirect } from "next/navigation";
 
 export default async function VolnaPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { profile } = await getCurrentUserAndProfile();
+  if (!profile) {
+    redirect("/login");
+  }
 
-  const { data: profile } = (await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user!.id)
-    .single()) as { data: Profile | null };
+  const supabase = await createClient();
 
   const { data: volna } = (await supabase
     .from("volna")

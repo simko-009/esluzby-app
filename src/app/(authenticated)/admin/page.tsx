@@ -1,20 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserAndProfile } from "@/lib/supabase/current-user";
 import { redirect } from "next/navigation";
 import { AdminClient } from "@/components/admin/AdminClient";
 import type { Profile } from "@/lib/types/database";
 import { isAdmin } from "@/lib/types/database";
 
 export default async function AdminPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { profile } = await getCurrentUserAndProfile();
+  if (!profile) {
+    redirect("/login");
+  }
 
-  const { data: profile } = (await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user!.id)
-    .single()) as { data: Profile | null };
+  const supabase = await createClient();
 
   if (!profile || !isAdmin(profile)) {
     redirect("/domov");

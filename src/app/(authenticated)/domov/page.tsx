@@ -1,18 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserAndProfile } from "@/lib/supabase/current-user";
 import { DomovClient } from "@/components/domov/DomovClient";
 import type { Profile } from "@/lib/types/database";
+import { redirect } from "next/navigation";
 
 export default async function DomovPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { profile } = await getCurrentUserAndProfile();
+  if (!profile) {
+    redirect("/login");
+  }
 
-  const { data: profile } = (await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user!.id)
-    .single()) as { data: Profile | null };
+  const supabase = await createClient();
 
   const { data: allProfiles } = (await supabase
     .from("profiles")

@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserAndProfile } from "@/lib/supabase/current-user";
 import { ProfilClient } from "@/components/profil/ProfilClient";
 import type { Profile, DennyStav, Tema, Volno } from "@/lib/types/database";
+import { redirect } from "next/navigation";
 
 export default async function ProfilPage({
   searchParams,
@@ -9,20 +11,14 @@ export default async function ProfilPage({
 }) {
   const supabase = await createClient();
   const params = await searchParams;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Current user's profile
-  const { data: currentProfile } = (await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user!.id)
-    .single()) as { data: Profile | null };
+  const { user, profile: currentProfile } = await getCurrentUserAndProfile();
+  if (!user || !currentProfile) {
+    redirect("/login");
+  }
 
   // Target profile (self or other user if admin viewing)
-  const targetId = params.user || user!.id;
-  const isOwnProfile = targetId === user!.id;
+  const targetId = params.user || user.id;
+  const isOwnProfile = targetId === user.id;
   const { data: targetProfile } = isOwnProfile
     ? { data: currentProfile }
     : ((await supabase
