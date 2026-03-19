@@ -14,7 +14,9 @@ export default async function DomovPage() {
 
   const { data: allProfiles } = (await supabase
     .from("profiles")
-    .select("*")
+    .select(
+      "id, email, meno, priezvisko, roly, telefon, region, je_regionalny, created_at",
+    )
     .order("priezvisko")) as { data: Profile[] | null };
 
   return (

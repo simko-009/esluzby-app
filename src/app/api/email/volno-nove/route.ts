@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendMail, FROM } from "@/lib/email";
-import type { TypVolna, Profile } from "@/lib/types/database";
-import { typVolnaLabels, hasRole } from "@/lib/types/database";
+import type { TypVolna } from "@/lib/types/database";
+import { typVolnaLabels } from "@/lib/types/database";
 
 interface RequestBody {
   reporterMeno: string;
@@ -32,21 +32,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Fetch all profiles and find office managers
-  const { data: profiles } = await supabase.from("profiles").select("*");
+  // Fetch only office manager recipients needed for email delivery.
+  const { data: recipients } = await supabase
+    .from("profiles")
+    .select("id, email")
+    .contains("roly", ["office_manazer"])
+    .neq("id", user.id)
+    .not("email", "is", null);
 
-  if (!profiles || profiles.length === 0) {
-    return NextResponse.json({ success: true, sent: 0 });
-  }
-
-  const officeManagers = (profiles as unknown as Profile[]).filter((p) =>
-    hasRole(p, "office_manazer"),
-  );
-
-  // Don't send notification to the person who created the leave request
-  const recipients = officeManagers.filter((p) => p.id !== user.id && p.email);
-
-  if (recipients.length === 0) {
+  if (!recipients || recipients.length === 0) {
     return NextResponse.json({ success: true, sent: 0 });
   }
 
@@ -108,7 +102,7 @@ export async function POST(req: NextRequest) {
       recipients.map((manager) =>
         sendMail({
           from: FROM,
-          to: manager.email!,
+          to: manager.email,
           subject,
           html,
         }),

@@ -14,12 +14,16 @@ export default async function VolnaPage() {
 
   const { data: volna } = (await supabase
     .from("volna")
-    .select("*")
+    .select(
+      "id, reporter_id, datum_od, datum_do, dovod, typ, stav, schvalil_id, poznamka, created_at",
+    )
     .order("datum_od", { ascending: false })) as { data: Volno[] | null };
 
   const { data: allProfiles } = (await supabase
     .from("profiles")
-    .select("*")) as { data: Profile[] | null };
+    .select(
+      "id, email, meno, priezvisko, roly, telefon, region, je_regionalny, created_at",
+    )) as { data: Profile[] | null };
 
   return (
     <VolnaClient
