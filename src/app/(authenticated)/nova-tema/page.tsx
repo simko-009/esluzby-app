@@ -95,6 +95,7 @@ export default function NovaTemPage() {
             </button>
             <Link
               href="/domov"
+              prefetch={false}
               className="flex-1 px-4 py-2.5 bg-blue-600 rounded-xl text-sm font-medium text-white hover:bg-blue-700 transition-colors text-center"
             >
               Na domov
@@ -110,6 +111,7 @@ export default function NovaTemPage() {
       <div className="mb-6">
         <Link
           href="/domov"
+          prefetch={false}
           className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
         >
           <ArrowLeft className="w-4 h-4" />

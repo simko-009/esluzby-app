@@ -45,7 +45,11 @@ export function Navbar({ profile }: NavbarProps) {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
 
-          <Link href="/domov" className="flex items-center gap-2">
+          <Link
+            href="/domov"
+            prefetch={false}
+            className="flex items-center gap-2"
+          >
             <img src="/logo.png" alt="Logo" className="w-9 p-0.5" />
 
             <span className="flex items-center">
@@ -62,6 +66,7 @@ export function Navbar({ profile }: NavbarProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive(item.href)
                     ? "bg-blue-50 text-blue-700"
@@ -122,6 +127,7 @@ export function Navbar({ profile }: NavbarProps) {
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50">
                   <Link
                     href="/profil"
+                    prefetch={false}
                     onClick={() => setShowMenu(false)}
                     className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
                   >
@@ -131,6 +137,7 @@ export function Navbar({ profile }: NavbarProps) {
                   {hasRole(profile, "admin") && (
                     <Link
                       href="/admin"
+                      prefetch={false}
                       onClick={() => setShowMenu(false)}
                       className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
                     >

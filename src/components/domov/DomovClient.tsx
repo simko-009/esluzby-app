@@ -5,6 +5,7 @@ import {
   useEffect,
   useLayoutEffect,
   useCallback,
+  useMemo,
   useRef,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -178,8 +179,7 @@ export function DomovClient({
   } | null>(null);
   // Expanded popis state
   const [expandedPopis, setExpandedPopis] = useState<Set<string>>(new Set());
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
+  const supabase = useMemo(() => createClient(), []);
   const scrollRestoreRef = useRef<number | null>(null);
   const isReadOnlyRole = hasRole(currentProfile, "sefproducent");
 

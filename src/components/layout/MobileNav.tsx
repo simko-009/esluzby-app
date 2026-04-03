@@ -58,6 +58,7 @@ export function MobileNav({ profile }: MobileNavProps) {
           {/* Domov */}
           <Link
             href="/domov"
+            prefetch={false}
             className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg min-w-15 transition-colors ${
               isActive("/domov") ? "text-blue-600" : "text-gray-500"
             }`}
@@ -88,6 +89,7 @@ export function MobileNav({ profile }: MobileNavProps) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg min-w-15 transition-colors ${
                     isActive(item.href) ? "text-blue-600" : "text-gray-500"
                   }`}
@@ -196,6 +198,7 @@ export function MobileNav({ profile }: MobileNavProps) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={false}
                     onClick={() => setShowMenu(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors ${
                       isActive(item.href)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import {
@@ -102,8 +102,7 @@ export function ProfilClient({
     "calendar" | "temy" | "volna" | "settings"
   >(isOwnProfile ? "calendar" : "calendar");
 
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
   const isAdminUser = checkIsAdmin(currentProfile);

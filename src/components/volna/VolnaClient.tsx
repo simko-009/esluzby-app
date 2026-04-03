@@ -20,7 +20,7 @@ import {
   History,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { NoveVolnoModal } from "@/components/volna/NoveVolnoModal";
 
@@ -45,8 +45,7 @@ export function VolnaClient({
   const [poznamka, setPoznamka] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [showNoveVolno, setShowNoveVolno] = useState(false);
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
+  const supabase = useMemo(() => createClient(), []);
   const isReadOnlyRole = hasRole(currentProfile, "sefproducent");
 
   const fetchVolna = useCallback(async () => {
