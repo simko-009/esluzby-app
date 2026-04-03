@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Lock, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 export default function ObnovitHesloPage() {
   const [password, setPassword] = useState("");
@@ -17,7 +18,7 @@ export default function ObnovitHesloPage() {
   // null = still waiting, true = ready, false = link invalid/expired
   const [sessionReady, setSessionReady] = useState<boolean | null>(null);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     // First: check the URL hash for an error from Supabase (e.g. expired OTP)
@@ -32,16 +33,18 @@ export default function ObnovitHesloPage() {
     // Listen for PASSWORD_RECOVERY event fired when Supabase exchanges the hash token
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent) => {
       if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         setSessionReady(true);
       }
     });
 
     // Also catch an already-active session (e.g. PKCE exchanged by middleware)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setSessionReady(true);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }: { data: { session: Session | null } }) => {
+        if (session) setSessionReady(true);
+      });
 
     // If nothing fires after 10 s the link is likely invalid
     const timer = setTimeout(() => {
