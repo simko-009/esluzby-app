@@ -97,9 +97,8 @@ export function VolnaClient({
   const isApprover = canApproveLeave(currentProfile);
 
   const filteredVolna = volnaList.filter((v) => {
-    // Approved leaves that have already expired are never shown
-    if (v.stav === "schvalene" && v.datum_do < today) return false;
-    // Other past leave requests are hidden unless the approver toggled "show past"
+    // In "Predošlé" mode we show only past leaves, otherwise only current/future.
+    if (showPast && v.datum_do >= today) return false;
     if (!showPast && v.datum_do < today) return false;
 
     if (filter === "caka") return v.stav === "caka";
@@ -107,18 +106,13 @@ export function VolnaClient({
   });
 
   const sortedVolna = [...filteredVolna].sort((a, b) => {
-    const aUpcomingOrCurrent = a.datum_do >= today;
-    const bUpcomingOrCurrent = b.datum_do >= today;
-
-    if (aUpcomingOrCurrent !== bUpcomingOrCurrent) {
-      return aUpcomingOrCurrent ? -1 : 1;
+    if (showPast) {
+      const byEndDate = b.datum_do.localeCompare(a.datum_do);
+      if (byEndDate !== 0) return byEndDate;
+      return b.datum_od.localeCompare(a.datum_od);
     }
 
-    if (aUpcomingOrCurrent) {
-      return a.datum_od.localeCompare(b.datum_od);
-    }
-
-    return b.datum_od.localeCompare(a.datum_od);
+    return a.datum_od.localeCompare(b.datum_od);
   });
 
   const handleDelete = async (id: string) => {
@@ -243,7 +237,7 @@ export function VolnaClient({
           ),
         )}
 
-        {/* Show past leaves toggle - only for admin/office_manazer */}
+        {/* Past leaves toggle - only for admin/office_manazer */}
         {isApprover && (
           <button
             onClick={() => setShowPast(!showPast)}
@@ -254,7 +248,7 @@ export function VolnaClient({
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            Minulé
+            Predošlé
           </button>
         )}
       </div>
