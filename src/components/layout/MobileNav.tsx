@@ -44,7 +44,7 @@ export function MobileNav({ profile }: MobileNavProps) {
 
   const navItems = [
     { href: "/domov", label: "Domov", icon: Home },
-    { href: "/volna", label: "Voľná", icon: Calendar },
+    { href: "/volna", label: "Voľno", icon: Calendar },
     { href: "/profil", label: "Profil", icon: User },
   ];
 
@@ -187,7 +187,7 @@ export function MobileNav({ profile }: MobileNavProps) {
 
               {[
                 { href: "/domov", label: "Domov", icon: Home },
-                { href: "/volna", label: "Voľná", icon: Calendar },
+                { href: "/volna", label: "Voľno", icon: Calendar },
                 { href: "/profil", label: "Profil", icon: User },
                 ...(hasRole(profile, "admin")
                   ? [{ href: "/admin", label: "Správa účtov", icon: Shield }]

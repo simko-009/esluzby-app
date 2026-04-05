@@ -106,6 +106,21 @@ export function VolnaClient({
     return true;
   });
 
+  const sortedVolna = [...filteredVolna].sort((a, b) => {
+    const aUpcomingOrCurrent = a.datum_do >= today;
+    const bUpcomingOrCurrent = b.datum_do >= today;
+
+    if (aUpcomingOrCurrent !== bUpcomingOrCurrent) {
+      return aUpcomingOrCurrent ? -1 : 1;
+    }
+
+    if (aUpcomingOrCurrent) {
+      return a.datum_od.localeCompare(b.datum_od);
+    }
+
+    return b.datum_od.localeCompare(a.datum_od);
+  });
+
   const handleDelete = async (id: string) => {
     if (isReadOnlyRole) return;
     if (!confirm("Naozaj chcete zmazať toto voľno?")) return;
@@ -191,7 +206,7 @@ export function VolnaClient({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Všetky voľná</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Prehľad naplánovaných voľien
+            Prehľad naplánovaných volien
           </p>
         </div>
         {!isReadOnlyRole && (
@@ -244,9 +259,9 @@ export function VolnaClient({
         )}
       </div>
 
-      {filteredVolna.length > 0 ? (
+      {sortedVolna.length > 0 ? (
         <div className="space-y-3">
-          {filteredVolna.map((v) => {
+          {sortedVolna.map((v) => {
             const reporter = getProfile(v.reporter_id);
             const isMine = v.reporter_id === currentProfile.id;
             const canDelete = !isReadOnlyRole && (isMine || isApprover);

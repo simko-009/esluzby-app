@@ -34,7 +34,7 @@ export function Navbar({ profile }: NavbarProps) {
 
   const navItems = [
     { href: "/domov", label: "Domov" },
-    { href: "/volna", label: "Voľná" },
+    { href: "/volna", label: "Voľno" },
   ];
 
   const isActive = (href: string) => pathname === href;

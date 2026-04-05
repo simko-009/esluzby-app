@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
             : ""
         }
 
-        <p style="margin-top: 20px; font-size: 14px;">Žiadosť čaká na schválenie v sekcii <strong>Voľná</strong>.</p>
+        <p style="margin-top: 20px; font-size: 14px;">Žiadosť čaká na schválenie v sekcii <strong>Voľno</strong>.</p>
 
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
         <p style="color: #94a3b8; font-size: 12px; margin: 0;">

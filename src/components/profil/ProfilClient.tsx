@@ -498,7 +498,7 @@ export function ProfilClient({
           [
             { key: "calendar", label: "Kalendár", icon: CalendarDays },
             { key: "temy", label: "Témy", icon: FileText },
-            { key: "volna", label: "Voľná", icon: Calendar },
+            { key: "volna", label: "Voľno", icon: Calendar },
             ...(isReadOnlyRole
               ? []
               : isOwnProfile || isAdminUser
@@ -908,7 +908,7 @@ export function ProfilClient({
       {activeTab === "volna" && (
         <div className="space-y-3">
           <p className="text-xs text-gray-400 px-1">
-            {volna.length} voľien celkovo
+            {volna.length} volien celkovo
           </p>
           {volna.length > 0 ? (
             <div className="space-y-2">
