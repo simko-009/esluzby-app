@@ -416,6 +416,10 @@ export function DomovClient({
 
   // Apply sorting — current user always first, then čakajúce hore, then alphabetical
   const sortedFilteredReporters = [...filteredReporters].sort((a, b) => {
+    // Current user always first when included in the filtered view
+    if (a.id === currentProfile.id) return -1;
+    if (b.id === currentProfile.id) return 1;
+
     if (filterRegion === "regionalny") {
       if (cakajuceNaVrch) {
         const aHasCaka = getReporterTemy(a.id).some((t) => t.stav === "caka");
@@ -439,9 +443,6 @@ export function DomovClient({
       return 0;
     }
 
-    // Current user always first
-    if (a.id === currentProfile.id) return -1;
-    if (b.id === currentProfile.id) return 1;
     // Čakajúce hore: reporters with pending topics first
     if (cakajuceNaVrch) {
       const aHasCaka = getReporterTemy(a.id).some((t) => t.stav === "caka");
