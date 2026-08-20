@@ -417,6 +417,13 @@ export function DomovClient({
   // Apply sorting — current user always first, then čakajúce hore, then alphabetical
   const sortedFilteredReporters = [...filteredReporters].sort((a, b) => {
     if (filterRegion === "regionalny") {
+      if (cakajuceNaVrch) {
+        const aHasCaka = getReporterTemy(a.id).some((t) => t.stav === "caka");
+        const bHasCaka = getReporterTemy(b.id).some((t) => t.stav === "caka");
+        if (aHasCaka && !bHasCaka) return -1;
+        if (!aHasCaka && bHasCaka) return 1;
+      }
+
       const aOrder = REGIONALNY_REPORTER_ORDER.indexOf(
         normalizeSurname(a.priezvisko),
       );
