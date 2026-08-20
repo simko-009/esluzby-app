@@ -73,6 +73,36 @@ const POZICIA_ORDER: PoziciaTyp[] = [
   "redaktor_tn_live",
 ];
 
+const REGIONALNY_REPORTER_ORDER = [
+  "CAPEKOVA",
+  "TESAKOVA",
+  "KANDRACOVA",
+  "SIVAK",
+  "JEDINAK",
+  "BUCKO",
+  "DEMETER",
+  "KREMPASKA",
+  "RUTTKAY",
+  "BUJNA",
+  "ZIMAN",
+  "VNENCAK",
+  "TRIBULA",
+  "KERMIET",
+  "KASIAROVA",
+  "FRONKO",
+  "CEROVSKA",
+  "KOLEKOVA",
+  "MINDAK",
+  "SILHAVIK",
+  "FAZEKAS",
+];
+
+const normalizeSurname = (surname: string) =>
+  surname
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+
 export function DomovClient({
   currentProfile,
   allProfiles: initialAllProfiles,
@@ -386,6 +416,22 @@ export function DomovClient({
 
   // Apply sorting — current user always first, then čakajúce hore, then alphabetical
   const sortedFilteredReporters = [...filteredReporters].sort((a, b) => {
+    if (filterRegion === "regionalny") {
+      const aOrder = REGIONALNY_REPORTER_ORDER.indexOf(
+        normalizeSurname(a.priezvisko),
+      );
+      const bOrder = REGIONALNY_REPORTER_ORDER.indexOf(
+        normalizeSurname(b.priezvisko),
+      );
+      const aRank = aOrder === -1 ? REGIONALNY_REPORTER_ORDER.length : aOrder;
+      const bRank = bOrder === -1 ? REGIONALNY_REPORTER_ORDER.length : bOrder;
+      if (aRank !== bRank) return aRank - bRank;
+      if (aRank === REGIONALNY_REPORTER_ORDER.length) {
+        return a.priezvisko.localeCompare(b.priezvisko);
+      }
+      return 0;
+    }
+
     // Current user always first
     if (a.id === currentProfile.id) return -1;
     if (b.id === currentProfile.id) return 1;
